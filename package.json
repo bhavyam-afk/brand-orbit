@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@prisma/client": "^6.16.3",
     "next": "15.5.4",
+    "next-auth": "^4.24.11",
     "pg": "^8.16.3",
     "prisma": "^6.16.3",
     "react": "19.1.0",

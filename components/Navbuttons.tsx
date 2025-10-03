@@ -1,7 +1,7 @@
+"use client";
 import React, { useState } from 'react';
 import LoginCard from './LoginCard';
 import SignupCard from './SignupCard';
-
 interface NavbuttonsProps {
   type: "login" | "signup";
 }
@@ -26,8 +26,8 @@ const Navbuttons = ({ type }: NavbuttonsProps) => {
         <button
           className={
             isLogin
-              ? "px-4 py-2 rounded-3xl transition text-white font-semibold shadow hover:bg-[#0f172a]"
-              : "px-4 py-2 rounded-3xl border-2 transition text-white font-semibold shadow hover:bg-[#0f172a]"
+              ? "px-4 py-2 rounded-3xl transition-all duration-200 text-white font-semibold shadow hover:bg-[#0f172a] hover:scale-110"
+              : "px-4 py-2 rounded-3xl border-2 transition-all duration-200 text-white font-semibold shadow hover:bg-[#0f172a] hover:scale-110"
           }
           onClick={() => setDropdownOpen((open) => !open)}
         >
