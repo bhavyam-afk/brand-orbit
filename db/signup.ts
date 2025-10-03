@@ -1,3 +1,4 @@
+"use client";
 import prisma from './client';
 
 type SignupParams = {
@@ -20,4 +21,18 @@ export async function signupUser(params: SignupParams) {
         return await prisma.influencer.create({ data: { name, email, password } });
     }
     throw new Error('Invalid user type');
+}
+
+export async function getUserByEmailAndPassword(email: string, password: string, type: 'brand' | 'influencer') {
+    if (type === 'brand') {
+        const user = await prisma.brand.findFirst({ where: { email, password } });
+        if (!user) return null;
+        return { username: user.name, ...user };
+    }
+    if (type === 'influencer') {
+        const user = await prisma.influencer.findFirst({ where: { email, password } });
+        if (!user) return null;
+        return { username: user.name, ...user };
+    }
+    return null;
 }

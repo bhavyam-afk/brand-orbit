@@ -1,10 +1,10 @@
-"use client" ;
+"use client";
 
 import React, { useState } from "react";
 
 interface CardProps {
-  title: string ;
-  description: string ;
+  title: string;
+  description: string;
 }
 
 export default function Card({ title, description }: CardProps) {
@@ -89,7 +89,7 @@ export default function Card({ title, description }: CardProps) {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="absolute left-1/2 -top-8 transform -translate-x-1/2" style={{zIndex:2}}>
+      <div className="absolute left-1/2 -top-8 transform -translate-x-1/2" style={{ zIndex: 2 }}>
         <div className="w-16 h-16 rounded-full flex items-center justify-center bg-transparent">
           {getCardIcon(title)}
         </div>

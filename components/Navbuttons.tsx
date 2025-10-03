@@ -1,7 +1,9 @@
 "use client";
+
 import React, { useState } from 'react';
 import LoginCard from './LoginCard';
 import SignupCard from './SignupCard';
+
 interface NavbuttonsProps {
   type: "login" | "signup";
 }

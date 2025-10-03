@@ -1,3 +1,4 @@
+
 import Card from "./Card";
 
 const features = [
@@ -29,19 +30,12 @@ import React from 'react'
 const Features = () => {
   return (
     <div className="flex flex-wrap justify-center items-start gap-x-24 gap-y-16 mt-16">
-        {features.map((feature, idx) => (
-          <div
-            key={idx}
-            className={
-              // Stagger cards vertically for 2-column layout
-              idx % 2 === 0 ? "mb-24" : "mt-24"
-            }
-            style={{ width: "340px", minWidth: "280px" }}
-          >
-            <Card title={feature.title} description={feature.description} />
-          </div>
-        ))}
-      </div>
+      {features.map((feature, idx) => (
+        <div key={idx} className={ idx % 2 === 0 ? "mb-24" : "mt-24" } style={{ width: "340px", minWidth: "280px" }}>
+          <Card title={feature.title} description={feature.description} />
+        </div>
+      ))}
+    </div>
   )
 }
 
