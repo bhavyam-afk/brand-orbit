@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { getUserByEmailAndPassword } from "../db/signup";
 import { useRouter } from 'next/navigation';
 
 interface LoginCardProps {
@@ -19,13 +18,18 @@ const LoginCard = ({ userType }: LoginCardProps) => {
     e.preventDefault();
     setError("");
     try {
-      const user = await getUserByEmailAndPassword(email, password, userType);
-      if (!user || !user.username) {
-        setError("Invalid credentials or user not found");
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, type: userType }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Login failed");
         return;
       }
-      router.push(`/${user.username}/profile`);
-    } catch (err) {
+      router.push(`/${data.username}/profile`);
+    } catch (err: any) {
       setError("Login failed. Try again.");
     }
   }
