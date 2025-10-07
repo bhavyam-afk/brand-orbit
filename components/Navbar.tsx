@@ -22,6 +22,14 @@ const Navbar = () => {
                             <a href="#affiliate" className="block px-6 py-2 text-white hover:text-[#7b52d3] rounded-b-lg">Affiliate Marketing</a>
                         </div>
                     </div>
+                    {/* For Brands */}   
+                    <div className="relative group">
+                        <button className="text-white font-semibold hover:text-[#7b52d3] transition focus:outline-none" onClick={() => window.location.href = '/brand/page.jsx'}>For Brands</button>
+                    </div>
+                    {/* For Influencers */}   
+                    <div className="relative group">
+                        <button className="text-white font-semibold hover:text-[#7b52d3] transition focus:outline-none" onClick={() => window.location.href = '/influencer/page.jsx'}>For Influencers</button>
+                    </div>
                     {/* Success Stories Dropdown */}
                     <div className="relative group">
                         <button className="text-white font-semibold hover:text-blue-400 transition focus:outline-none">Success Stories</button>

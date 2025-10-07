@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-br from-[#0a0f2c] via-[#1a1f3c] to-[#232946] min-h-screen w-full relative`}>
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

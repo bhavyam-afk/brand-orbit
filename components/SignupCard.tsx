@@ -34,7 +34,7 @@ const SignupCard = ({ userType }: SignupCardProps) => {
         setError(data.error || "Signup failed");
         return;
       }
-      router.push(`/${data.username}/profile`);
+  router.push(`/${userType}/${name}/dashboard`);
     } catch (err: any) {
       setError("Signup failed");
     }
