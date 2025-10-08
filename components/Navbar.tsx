@@ -5,8 +5,7 @@ import Navbuttons from "./Navbuttons";
 
 const Navbar = () => {
     return (
-        <div className="navbar pt-3 sticky top-3 z-50">
-            <nav className="mx-auto w-[80vw] flex justify-between items-center px-12 py-6 bg-[#222] rounded-full shadow-lg">
+            <nav className="mx-auto pt-4 pb-4 sticky top-3 z-50 w-[80vw] flex justify-between items-center px-12 bg-[#222] rounded-full shadow-lg">
                 <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold tracking-wide text-white">Brand Orbit 🚀</span>
                 </div>
@@ -60,7 +59,6 @@ const Navbar = () => {
                     <Navbuttons type="signup" />
                 </div>
             </nav>
-        </div>
     );
 }
 

@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,48 +7,419 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Brand {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  password     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  campaigns    Campaign[]
-  payments     Payment[]
+//////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////
+
+enum UserRole {
+  INFLUENCER
+  BRAND
 }
 
-model Influencer {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  password     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  campaigns    Campaign[]
-  payments     Payment[]
+enum MediaType {
+  STORY
+  REEL
+  POST
+  LIVE
 }
 
-model Campaign {
-  id           Int      @id @default(autoincrement())
-  title        String
-  description  String
-  brandId      Int
-  influencerId Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  brand        Brand    @relation(fields: [brandId], references: [id])
-  influencer   Influencer @relation(fields: [influencerId], references: [id])
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
 }
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+//////////////////////////////////////////////////
+// MODELS
+//////////////////////////////////////////////////
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  role          UserRole 
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  influencerProfile InfluencerProfile?
+  brandProfile       BrandProfile?
+}
+
+//////////////////////////////////////////////////
+// INFLUENCER
+//////////////////////////////////////////////////
+
+model InfluencerProfile {
+  id             String      @id @default(cuid())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String      @unique
+  username       String      @unique
+  bio            String?
+  niche          String?
+  followersCount Int?
+  platformLinks  Json?       // store social links like { instagram: "...", youtube: "..." }
+  profilePic     String?
+  location       String?
+  rating         Float?      @default(0)
+
+  // Relations
+  packages       Package[]
+  offers         Offer[]     @relation("InfluencerOffers")
+  payments       Payment[]   @relation("InfluencerPayments")
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+//////////////////////////////////////////////////
+// BRAND
+//////////////////////////////////////////////////
+
+model BrandProfile {
+  id             String      @id @default(cuid())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String      @unique
+  brandName      String
+  industry       String?
+  logoUrl        String?
+  location       String?
+  contactPerson  String?
+
+  // Relations
+  offers         Offer[]     @relation("BrandOffers")
+  payments       Payment[]   @relation("BrandPayments")
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+//////////////////////////////////////////////////
+// PACKAGE
+//////////////////////////////////////////////////
+
+model Package {
+  id             String       @id @default(cuid())
+  influencer     InfluencerProfile @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  influencerId   String
+  title          String
+  description    String?
+  price          Float
+  deliveryTime   Int?          // in days
+  platform       String?       // e.g., "Instagram"
+  mediaType      MediaType
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  offers         Offer[]
+}
+
+//////////////////////////////////////////////////
+// OFFER
+//////////////////////////////////////////////////
+
+model Offer {
+  id              String       @id @default(cuid())
+  brand           BrandProfile       @relation("BrandOffers", fields: [brandId], references: [id], onDelete: Cascade)
+  brandId         String
+  influencer      InfluencerProfile  @relation("InfluencerOffers", fields: [influencerId], references: [id], onDelete: Cascade)
+  influencerId    String
+  package         Package?           @relation(fields: [packageId], references: [id])
+  packageId       String?
+  offerAmount     Float
+  message         String?
+  status          OfferStatus        @default(PENDING)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  // Relations
+  payment         Payment?
+  chatMessages    ChatMessage[]
+}
+
+//////////////////////////////////////////////////
+// PAYMENT
+//////////////////////////////////////////////////
 
 model Payment {
-  id           Int      @id @default(autoincrement())
-  amount       Float
-  status       String
-  brandId      Int
-  influencerId Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  brand        Brand    @relation(fields: [brandId], references: [id])
-  influencer   Influencer @relation(fields: [influencerId], references: [id])
+  id              String       @id @default(cuid())
+  offer           Offer        @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  offerId         String   @unique
+  brand           BrandProfile       @relation("BrandPayments", fields: [brandId], references: [id], onDelete: Cascade)
+  brandId         String
+  influencer      InfluencerProfile  @relation("InfluencerPayments", fields: [influencerId], references: [id], onDelete: Cascade)
+  influencerId    String
+  amount          Float
+  platformFee     Float?        @default(0)
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
+
+//////////////////////////////////////////////////
+// CHAT (optional but useful)
+//////////////////////////////////////////////////
+
+model ChatMessage {
+  id              String     @id @default(cuid())
+  offer           Offer      @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  offerId         String
+  senderId        String     // User id
+  receiverId      String     // User id
+  message         String
+  sentAt          DateTime   @default(now())
+}
+
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+// model Brand {
+//   id           Int      @id @default(autoincrement())
+//   name         String
+//   email        String   @unique
+//   password     String
+//   createdAt    DateTime @default(now())
+//   updatedAt    DateTime @updatedAt
+//   campaigns    Campaign[]
+//   payments     Payment[]
+// }
+
+// model Influencer {
+//   id           Int      @id @default(autoincrement())
+//   name         String
+//   email        String   @unique
+//   password     String
+//   createdAt    DateTime @default(now())
+//   updatedAt    DateTime @updatedAt
+//   campaigns    Campaign[]
+//   payments     Payment[]
+// }
+
+// model Campaign {
+//   id           Int      @id @default(autoincrement())
+//   title        String
+//   description  String
+//   brandId      Int
+//   influencerId Int
+//   createdAt    DateTime @default(now())
+//   updatedAt    DateTime @updatedAt
+//   brand        Brand    @relation(fields: [brandId], references: [id])
+//   influencer   Influencer @relation(fields: [influencerId], references: [id])
+// }
+
+// model Payment {
+//   id           Int      @id @default(autoincrement())
+//   amount       Float
+//   status       String
+//   brandId      Int
+//   influencerId Int
+//   createdAt    DateTime @default(now())
+//   updatedAt    DateTime @updatedAt
+//   brand        Brand    @relation(fields: [brandId], references: [id])
+//   influencer   Influencer @relation(fields: [influencerId], references: [id])
+// }
+
+
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+// // --------------------------
+// // USER + ROLES
+// // --------------------------
+// model User {
+//   id        String   @id @default(cuid())
+//   name      String
+//   email     String   @unique
+//   password  String
+//   role      Role
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   influencer InfluencerProfile?
+//   brand      BrandProfile?
+// }
+
+// enum Role {
+//   INFLUENCER
+//   BRAND
+// }
+
+// // --------------------------
+// // INFLUENCER
+// // --------------------------
+// model InfluencerProfile {
+//   id            String   @id @default(cuid())
+//   userId        String   @unique
+//   user          User     @relation(fields: [userId], references: [id])
+
+//   bio           String?
+//   category      String?
+//   location      String?
+//   pricingPlans  Package[]
+//   bookings      Booking[]
+//   collaborations Collaboration[]
+//   createdAt     DateTime @default(now())
+// }
+
+// // --------------------------
+// // BRAND
+// // --------------------------
+// model BrandProfile {
+//   id             String   @id @default(cuid())
+//   userId         String   @unique
+//   user           User     @relation(fields: [userId], references: [id])
+
+//   companyName    String
+//   industry       String?
+//   website        String?
+//   description    String?
+//   campaignBriefs CampaignBrief[]
+//   bookings       Booking[]
+//   collaborations Collaboration[]
+//   wallet         Wallet?
+// }
+
+// // --------------------------
+// // PACKAGES
+// // --------------------------
+// model Package {
+//   id            String   @id @default(cuid())
+//   influencerId  String
+//   influencer    InfluencerProfile @relation(fields: [influencerId], references: [id])
+//   type          PackageType
+//   price         Float
+//   description   String?
+//   deliveryTime  Int?
+//   bookings      Booking[]
+// }
+
+// enum PackageType {
+//   STORY
+//   POST
+//   REEL
+//   VIDEO
+//   LIVE_SESSION
+// }
+
+// // --------------------------
+// // BOOKINGS & COLLABS
+// // --------------------------
+// model Booking {
+//   id            String   @id @default(cuid())
+//   influencerId  String
+//   influencer    InfluencerProfile @relation(fields: [influencerId], references: [id])
+//   brandId       String
+//   brand         BrandProfile @relation(fields: [brandId], references: [id])
+//   packageId     String
+//   package       Package @relation(fields: [packageId], references: [id])
+//   status        BookingStatus @default(PENDING)
+//   date          DateTime @default(now())
+// }
+
+// enum BookingStatus {
+//   PENDING
+//   CONFIRMED
+//   COMPLETED
+//   CANCELLED
+// }
+
+// model Collaboration {
+//   id              String   @id @default(cuid())
+//   influencerId    String
+//   influencer      InfluencerProfile @relation(fields: [influencerId], references: [id])
+//   brandId         String
+//   brand           BrandProfile @relation(fields: [brandId], references: [id])
+//   campaignId      String?
+//   campaign        CampaignBrief? @relation(fields: [campaignId], references: [id])
+//   status          CollaborationStatus @default(PENDING)
+//   startDate       DateTime?
+//   endDate         DateTime?
+//   paymentStatus   PaymentStatus @default(UNPAID)
+// }
+
+// enum CollaborationStatus {
+//   PENDING
+//   ACCEPTED
+//   COMPLETED
+//   REJECTED
+// }
+
+// enum PaymentStatus {
+//   UNPAID
+//   PAID
+//   PARTIAL
+// }
+
+// // --------------------------
+// // CAMPAIGNS
+// // --------------------------
+// model CampaignBrief {
+//   id            String   @id @default(cuid())
+//   brandId       String
+//   brand         BrandProfile @relation(fields: [brandId], references: [id])
+//   title         String
+//   description   String
+//   budget        Float
+//   goals         String?
+//   targetAudience String?
+//   requirements  String?
+//   status        BriefStatus @default(DRAFT)
+//   createdAt     DateTime @default(now())
+//   collaborations Collaboration[] 
+// }
+
+// enum BriefStatus {
+//   DRAFT
+//   PUBLISHED
+//   CLOSED
+// }
+
+// // --------------------------
+// // WALLET & TRANSACTIONS
+// // --------------------------
+// model Wallet {
+//   id           String   @id @default(cuid())
+//   brandId      String   @unique
+//   brand        BrandProfile @relation(fields: [brandId], references: [id])
+//   balance      Float    @default(0)
+//   transactions Transaction[]
+// }
+
+// model Transaction {
+//   id           String   @id @default(cuid())
+//   walletId     String
+//   wallet       Wallet   @relation(fields: [walletId], references: [id])
+//   amount       Float
+//   type         TransactionType
+//   description  String?
+//   createdAt    DateTime @default(now())
+// }
+
+// enum TransactionType {
+//   CREDIT
+//   DEBIT
+// }
+
+
+
