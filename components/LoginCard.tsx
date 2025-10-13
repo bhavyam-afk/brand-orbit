@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { useRouter } from 'next/navigation';
 
 interface LoginCardProps {
@@ -44,7 +45,7 @@ const LoginCard = ({ userType }: LoginCardProps) => {
         <input type="password" placeholder="Password" className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
           value={password} onChange={e => setPassword(e.target.value)} required />
 
-        <button type="submit" className="mt-4 px-4 py-2 rounded bg-blue-700 hover:bg-blue-600 transition text-white font-semibold shadow">Login</button>
+  <LiquidButton type="submit" className="mt-4 w-full">Login</LiquidButton>
         {error && <div className="text-red-400 text-sm text-center mt-2">{error}</div>}
         
       </form>

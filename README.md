@@ -45,4 +45,5 @@ git branch \
 git add . \
 git commit -m " describe the change " \
 git pull origin main \
+git pull origin main --rebase \
 git push origin main 

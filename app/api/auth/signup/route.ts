@@ -45,8 +45,15 @@ export async function POST(req: Request) {
         },
       });
     } else if (role === 'INFLUENCER') {
-      // Use email prefix as default username if not provided
-      const username = email.split('@')[0];
+      // Use email prefix as base username
+      let baseUsername = email.split('@')[0];
+      let username = baseUsername;
+      let suffix = 1;
+      // Ensure username is unique
+      while (await prisma.influencerProfile.findUnique({ where: { username } })) {
+        username = `${baseUsername}${suffix}`;
+        suffix++;
+      }
       await prisma.influencerProfile.create({
         data: {
           userId: newUser.id,

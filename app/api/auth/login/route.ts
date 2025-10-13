@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Get profile info
+    // Only fetch profile after user is validated
     let profile = null;
     if (user.role === 'BRAND') {
       profile = await prisma.brandProfile.findUnique({ where: { userId: user.id } });
@@ -47,8 +47,8 @@ export async function POST(req: Request) {
         id: user.id,
         email: user.email,
         role: user.role,
-        profile,
       },
+      profile,
     }, { status: 200 });
   } catch (err) {
     console.error('Login error:', err);

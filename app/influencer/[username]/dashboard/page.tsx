@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Profile from "@/in-dash-components/Profile";
 import ListPackages from "@/in-dash-components/ListPackages";
@@ -30,6 +30,76 @@ const InfluencerDashboard = () => {
   const [activeSection, setActiveSection] = useState("Profile");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // State for each section
+  const [profile, setProfile] = useState<any>(null);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [wallet, setWallet] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get username from URL
+  const username = typeof window !== 'undefined' ? window.location.pathname.split("/")[2] : "";
+
+  // Fetch data for active section
+  useEffect(() => {
+    if (!username) return;
+    setLoading(true);
+    setError(null);
+    const fetchData = async () => {
+      try {
+        let res, data;
+        switch (activeSection) {
+          case "Profile":
+            res = await fetch(`/api/influencer2/${username}/profile`);
+            if (!res.ok) throw new Error("Failed to fetch profile");
+            data = await res.json();
+            setProfile(data);
+            break;
+          case "List Packages":
+            res = await fetch(`/api/influencer2/${username}/packages`);
+            if (!res.ok) throw new Error("Failed to fetch packages");
+            data = await res.json();
+            setPackages(data.packages || []);
+            break;
+          case "Analytics":
+            res = await fetch(`/api/influencer2/${username}/analytics`);
+            if (!res.ok) throw new Error("Failed to fetch analytics");
+            data = await res.json();
+            setAnalytics(data.analytics || null);
+            break;
+          case "Campaigns":
+            res = await fetch(`/api/influencer2/${username}/campaigns`);
+            if (!res.ok) throw new Error("Failed to fetch campaigns");
+            data = await res.json();
+            setCampaigns(data.campaigns || []);
+            break;
+          case "Wallet":
+            res = await fetch(`/api/influencer2/${username}/wallet`);
+            if (!res.ok) throw new Error("Failed to fetch wallet");
+            data = await res.json();
+            setWallet(data);
+            break;
+          case "Settings":
+            res = await fetch(`/api/influencer2/${username}/settingss`);
+            if (!res.ok) throw new Error("Failed to fetch settings");
+            data = await res.json();
+            setSettings(data.settings || null);
+            break;
+          default:
+            break;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An unknown error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [activeSection, username]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#232946] to-[#7b52d3] flex flex-col">
       {/* Top Bar */}
@@ -44,7 +114,12 @@ const InfluencerDashboard = () => {
         </button>
         {/* Logo & Name */}
         <div className="flex items-center gap-2">
-          <img src="/brand-orbit-logo.png" alt="Brand Orbit Logo" className="w-8 h-8 rounded" />
+          <img
+            src="/brand-orbit-logo.png"
+            alt="Brand Orbit Logo"
+            className="w-8 h-8 rounded"
+            onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://ui-avatars.com/api/?name=BO&background=7b52d3&color=fff'; }}
+          />
           <span className="font-bold text-xl text-[#7b52d3]">Brand Orbit</span>
         </div>
         {/* Contact & About Links */}
@@ -58,7 +133,12 @@ const InfluencerDashboard = () => {
         {/* Sidebar */}
         <div className={`transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'} bg-[#181c2f] p-6 flex flex-col gap-8 border-r border-[#7b52d3]`}>
           <div className="flex items-center gap-3 mb-8">
-            <img src="/influencer-avatar.png" alt="Avatar" className="w-12 h-12 rounded-full border-2 border-[#7b52d3] object-cover" />
+            <img
+              src="/influencer-avatar.png"
+              alt="Avatar"
+              className="w-12 h-12 rounded-full border-2 border-[#7b52d3] object-cover"
+              onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = '/profile-placeholder.png'; }}
+            />
             {sidebarOpen && <span className="font-bold text-xl text-white">Influencer</span>}
           </div>
           <nav className="flex flex-col gap-4">
@@ -68,7 +148,6 @@ const InfluencerDashboard = () => {
                 className={`flex items-center gap-3 px-4 py-2 rounded-lg font-semibold border ${activeSection === option ? 'bg-[#7b52d3] text-white' : 'bg-[#232946] text-[#7b52d3] border-[#7b52d3]'} transition`}
                 onClick={() => setActiveSection(option)}
               >
-                {/* Icon for each option (example icons, replace as needed) */}
                 <span className="text-2xl">
                   {option === "Profile" && <svg width="20" height="20" fill="currentColor"><circle cx="10" cy="7" r="4"/><rect x="4" y="13" width="12" height="5" rx="2"/></svg>}
                   {option === "List Packages" && <svg width="20" height="20" fill="currentColor"><rect x="3" y="7" width="14" height="10" rx="2"/><rect x="7" y="3" width="6" height="4" rx="1"/></svg>}
@@ -89,12 +168,29 @@ const InfluencerDashboard = () => {
 
         {/* Main Content */}
         <div className="flex-1 p-10">
-          {activeSection === "Profile" && <Profile />}
-          {activeSection === "List Packages" && <ListPackages />}
-          {activeSection === "Analytics" && <AnalyticsDashboard />}
-          {activeSection === "Campaigns" && <Campaigns />}
-          {activeSection === "Wallet" && <Wallet />}
-          {activeSection === "Settings" && <Settings />}
+          {loading && <div className="text-white">Loading {activeSection.toLowerCase()}...</div>}
+          {error && <div className="text-red-500">{error}</div>}
+          {!loading && !error && activeSection === "Profile" && profile && (
+            <Profile data={profile} />
+          )}
+          {!loading && !error && activeSection === "Profile" && !profile && (
+            <div className="text-gray-400">No profile data available.</div>
+          )}
+          {!loading && !error && activeSection === "List Packages" && (
+            <ListPackages packages={packages} />
+          )}
+          {!loading && !error && activeSection === "Analytics" && (
+            <AnalyticsDashboard analytics={analytics} />
+          )}
+          {!loading && !error && activeSection === "Campaigns" && (
+            <Campaigns campaigns={campaigns} />
+          )}
+          {!loading && !error && activeSection === "Wallet" && (
+            <Wallet wallet={wallet} />
+          )}
+          {!loading && !error && activeSection === "Settings" && (
+            <Settings settings={settings} />
+          )}
         </div>
       </div>
     </div>

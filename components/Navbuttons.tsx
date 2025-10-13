@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import LoginCard from './LoginCard';
 import SignupCard from './SignupCard';
 
@@ -25,16 +26,12 @@ const Navbuttons = ({ type }: NavbuttonsProps) => {
   return (
     <>
       <div className="relative">
-        <button
-          className={
-            isLogin
-              ? "px-4 py-2 rounded-3xl transition-all duration-200 text-white font-semibold shadow hover:bg-[#0f172a] hover:scale-110"
-              : "px-4 py-2 rounded-3xl border-2 transition-all duration-200 text-white font-semibold shadow hover:bg-[#0f172a] hover:scale-110"
-          }
+        <LiquidButton
+          className={isLogin ? "rounded-2xl font-semibold w-24" : "rounded-2xl font-semibold w-24 "}
           onClick={() => setDropdownOpen((open) => !open)}
         >
           {isLogin ? "Login" : "Signup"}
-        </button>
+        </LiquidButton>
         {dropdownOpen && (
           <div className="absolute right-0 mt-2 w-40 bg-[#222] rounded-lg shadow-lg z-40">
             <button
