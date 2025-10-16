@@ -1,3 +1,6 @@
+"use client" ;
+import React from "react";
+
 type ProfileData = {
   id: string;
   userId: string;
@@ -29,6 +32,48 @@ interface ProfileProps {
 }
 
 const Profile: React.FC<ProfileProps> = ({ data }) => {
+  // Mock platform details (replace with API/model fetch later)
+  const platformDetails: Record<string, {
+    followers: number;
+    offers: number;
+    packages: number;
+    bio: string;
+  }> = {
+    instagram: {
+      followers: 12000,
+      offers: 2,
+      packages: 5,
+      bio: "Instagram bio for influencer.",
+    },
+    youtube: {
+      followers: 5000,
+      offers: 1,
+      packages: 2,
+      bio: "YouTube bio for influencer.",
+    },
+    twitter: {
+      followers: 3000,
+      offers: 0,
+      packages: 1,
+      bio: "Twitter bio for influencer.",
+    },
+  };
+
+  // Platform logo mapping
+  const platformLogos: Record<string, string> = {
+    instagram: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg",
+    youtube: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg",
+    twitter: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitter.svg",
+  };
+
+  const [selectedPlatform, setSelectedPlatform] = React.useState<string | null>(null);
+  const handlePlatformClick = (platform: string) => {
+    setSelectedPlatform(platform);
+  };
+  const handleCloseDetails = () => {
+    setSelectedPlatform(null);
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto bg-gradient-to-br from-[#232946] to-[#2d325a] rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-[#7b52d3]/40">
       {/* Sidebar Avatar & Basic Info */}
@@ -68,6 +113,25 @@ const Profile: React.FC<ProfileProps> = ({ data }) => {
             Verified
           </span>
         )}
+      {/* Platform Details Modal/Card (rendered at root) */}
+      {selectedPlatform && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-8 min-w-[300px] relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800" onClick={handleCloseDetails}>&times;</button>
+            <h4 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <img src={platformLogos[selectedPlatform]} alt={selectedPlatform} className="w-7 h-7" />
+              <span className="capitalize">{selectedPlatform}</span> Details
+            </h4>
+            <div className="flex flex-col gap-2">
+              <div><span className="font-semibold">Followers:</span> {platformDetails[selectedPlatform]?.followers ?? "-"}</div>
+              <div><span className="font-semibold">Offers:</span> {platformDetails[selectedPlatform]?.offers ?? "-"}</div>
+              <div><span className="font-semibold">Packages:</span> {platformDetails[selectedPlatform]?.packages ?? "-"}</div>
+              <div><span className="font-semibold">Bio:</span> {platformDetails[selectedPlatform]?.bio ?? "-"}</div>
+            </div>
+            {/* TODO: Replace with real API/model data */}
+          </div>
+        </div>
+      )}
       </div>
       {/* Main Info & Stats */}
       <div className="flex-1 flex flex-col gap-8 p-10">
@@ -127,7 +191,8 @@ const Profile: React.FC<ProfileProps> = ({ data }) => {
           <ul className="flex flex-wrap gap-4">
             {data.platforms && Object.entries(data.platforms).length > 0 ? (
               Object.entries(data.platforms).map(([platform, link], idx) => (
-                <li key={platform + idx} className="flex items-center gap-2 bg-[#7b52d3]/10 px-3 py-1 rounded-full text-sm text-[#7b52d3] font-semibold">
+                <li key={platform + idx} className="flex items-center gap-2 bg-[#7b52d3]/10 px-3 py-1 rounded-full text-sm text-[#7b52d3] font-semibold cursor-pointer" onClick={() => handlePlatformClick(platform.toLowerCase())}>
+                  <img src={platformLogos[platform.toLowerCase()]} alt={platform} className="w-6 h-6" />
                   <span className="capitalize">{platform}</span>
                   <a href={link} target="_blank" rel="noopener noreferrer" className="underline text-blue-400 hover:text-blue-200">Visit</a>
                 </li>

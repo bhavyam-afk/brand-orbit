@@ -53,39 +53,39 @@ const dropdowns: Record<DropdownKey, DropdownItem[]> = {
     ],
 };
 
+
 const Navbar = () => {
     const [hovered, setHovered] = useState<DropdownKey | null>(null);
     return (
-        <nav className="bg-white text-black sticky top-4 z-50 flex items-center justify-between px-8 py-3 mx-auto max-w-7xl border rounded-full">
-            <span className="text-2xl font-bold tracking-wide">Brand Orbit 🚀</span>
-            <div className="flex justify-center relative">
-                <div className="flex items-center bg-white text-black py-1 px-5">
+        <nav className="bg-white text-black sticky top-4 z-50 flex items-center justify-between px-10 py-4 mx-auto max-w-7xl border rounded-full shadow-md">
+            <span className="text-2xl font-bold tracking-wide flex flex-col items-start justify-center min-w-[120px]">
+                Brand Orbit 🚀
+            </span>
+            <div className="flex-1 flex justify-center items-center">
+                {/* Tubelight NavBar with dropdown logic */}
+                <div className="relative flex items-center bg-white text-black py-2 px-6 gap-2">
                     {navItems.map((item) => {
                         const hasDropdown = ["Programs", "Success Stories", "Why BrandOrbit"].includes(item.name);
                         return (
                             <div
                                 key={item.name}
-                                className="relative"
+                                className="relative flex flex-col items-center"
                                 onMouseEnter={() => hasDropdown && setHovered(item.name as DropdownKey)}
                                 onMouseLeave={() => setHovered(null)}
                             >
-                                <a
-                                    href={item.url}
-                                    className="relative cursor-pointer font-semibold px-6 py-2 rounded-full transition-colors text-black hover:text-black"
-                                >
-                                    <span className="hidden md:inline">{item.name}</span>
-                                    <span className="md:hidden">
-                                        <item.icon size={18} strokeWidth={2.5} />
-                                    </span>
-                                </a>
+                                {/* Use tubelight NavBar tab styling and lamp effect */}
+                                <NavBar
+                                    items={[item]}
+                                    className=""
+                                />
                                 {/* Dropdown */}
                                 {hasDropdown && hovered === item.name && (
-                                    <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                                    <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
                                         {dropdowns[item.name as DropdownKey].map((d: DropdownItem) => (
                                             <a
                                                 key={d.label}
                                                 href={d.href}
-                                                className="block px-6 py-2 text-black hover:bg-gray-100 rounded-lg"
+                                                className="block px-6 py-2 text-black hover:bg-gray-50 rounded-xl text-base"
                                             >
                                                 {d.label}
                                             </a>
@@ -97,7 +97,7 @@ const Navbar = () => {
                     })}
                 </div>
             </div>
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-center ml-4">
                 <Navbuttons type="login" />
                 <Navbuttons type="signup" />
             </div>
