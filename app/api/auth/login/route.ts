@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import prisma from '../../../../db/prisma';
-import { generateJWT } from '../../../../db/auth';
+import prisma from '../../../../lib/prisma';
+import { generateJWT } from '../../../../lib/auth';
 
 
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     // Check role matches what was selected
-    if ((type === 'brand' && user.role !== 'BRAND') || (type === 'influencer' && user.role !== 'INFLUENCER')) {
+    if ((type === 'brand' && user.userType !== 'BRAND') || (type === 'influencer' && user.userType !== 'CREATOR')) {
       return NextResponse.json({ error: 'User type mismatch' }, { status: 400 });
     }
 
@@ -34,19 +34,19 @@ export async function POST(req: Request) {
 
     // Only fetch profile after user is validated
     let profile = null;
-    if (user.role === 'BRAND') {
+    if (user.userType === 'BRAND') {
       profile = await prisma.brandProfile.findUnique({ where: { userId: user.id } });
-    } else if (user.role === 'INFLUENCER') {
-      profile = await prisma.influencerProfile.findUnique({ where: { userId: user.id } });
+    } else if (user.userType === 'CREATOR') {
+      profile = await prisma.creatorProfile.findUnique({ where: { userId: user.id } });
     }
 
-    const token = generateJWT({ id: user.id, email: user.email, role: user.role }, secret);
+    const token = generateJWT({ id: user.id, email: user.email, role: user.userType }, secret);
     return NextResponse.json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: user.userType,
       },
       profile,
     }, { status: 200 });

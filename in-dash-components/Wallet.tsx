@@ -1,79 +1,194 @@
-import React from "react";
-import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+'use client'
 
+import React from 'react';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 
-interface WalletProps {
-  wallet?: {
-    balance?: number;
-    payments?: any[];
-  };
-}
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-
-const mockWallet = {
-  totalEarnings: 125000,
-  pendingPayments: [
-    { id: 1, brand: 'Nike', amount: 25000, status: 'Pending', method: 'Stripe' },
-    { id: 2, brand: 'L’Oreal', amount: 18000, status: 'Pending', method: 'Razorpay' },
-  ],
-  earningsTrend: [
-    { month: 'Apr', earnings: 18000 },
-    { month: 'May', earnings: 22000 },
-    { month: 'Jun', earnings: 25000 },
-    { month: 'Jul', earnings: 20000 },
-    { month: 'Aug', earnings: 30000 },
-    { month: 'Sep', earnings: 10000 },
-    { month: 'Oct', earnings: 20000 },
-  ],
-  aiProjection: 27000,
+type Transaction = {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  status: 'completed' | 'pending' | 'processing';
 };
 
-const Wallet: React.FC<WalletProps> = () => (
-  <div className="bg-[#232946] rounded-2xl shadow-lg p-8 flex flex-col gap-8">
-    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><span role="img" aria-label="wallet">💰</span>Wallet</h2>
-    {/* 1. Total Earnings */}
-    <div className="bg-[#181c2f] rounded-xl p-6 shadow border border-[#7b52d3] flex flex-col gap-2 mb-4">
-      <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><span role="img" aria-label="money">💰</span>Total Earnings</h3>
-      <div className="text-gray-400 text-sm">Sum of paid campaigns</div>
-      <div className="mt-2 text-3xl font-bold text-[#7b52d3]">₹{mockWallet.totalEarnings.toLocaleString()}</div>
+type PendingCollab = {
+  brandName: string;
+  amount: number;
+  status: 'pending' | 'processing';
+  expectedDate: string;
+};
+
+interface WalletProps {
+  totalEarnings?: number;
+  goalAmount?: number;
+  pendingCollabs?: PendingCollab[];
+  transactions?: Transaction[];
+}
+
+const mockData = {
+  earnings: {
+    total: 15000,
+    goal: 25000,
+    monthlyData: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      earnings: [2000, 3000, 2500, 4000, 2000, 1500],
+      goals: [4000, 4000, 4000, 4000, 4000, 4000],
+    },
+  },
+  pendingCollabs: [
+    { brandName: 'Nike', amount: 2500, status: 'pending', expectedDate: '2025-11-01' },
+    { brandName: 'Adidas', amount: 1800, status: 'processing', expectedDate: '2025-10-25' },
+    { brandName: 'Puma', amount: 2000, status: 'pending', expectedDate: '2025-11-05' },
+  ] as const,
+  transactions: [
+    { id: '1', date: '2025-10-20', description: 'Campaign Payment - Nike', amount: 3000, status: 'completed' },
+    { id: '2', date: '2025-10-15', description: 'Campaign Payment - Adidas', amount: 2500, status: 'completed' },
+    { id: '3', date: '2025-10-10', description: 'Campaign Payment - Puma', amount: 1800, status: 'completed' },
+  ],
+};
+
+const Wallet: React.FC<WalletProps> = ({
+  totalEarnings = mockData.earnings.total,
+  goalAmount = mockData.earnings.goal,
+  pendingCollabs = mockData.pendingCollabs,
+  transactions = mockData.transactions,
+}) => {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <div className="bg-[#232946] rounded-2xl shadow-lg p-8 flex flex-col gap-8 border border-[#7b52d3]">
+      {/* Top Section - Earnings vs Goal */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Chart */}
+        <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+          <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Earnings vs Goal</h2>
+          <Bar
+            data={{
+              labels: mockData.earnings.monthlyData.labels,
+              datasets: [
+                {
+                  label: 'Monthly Earnings',
+                  data: mockData.earnings.monthlyData.earnings,
+                  backgroundColor: 'rgba(123, 82, 211, 0.6)',
+                },
+                {
+                  label: 'Monthly Goals',
+                  data: mockData.earnings.monthlyData.goals,
+                  backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'top' as const,
+                },
+                title: {
+                  display: false,
+                },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                },
+              },
+            }}
+          />
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="bg-white/5 p-4 rounded-lg">
+              <p className="text-gray-400">Total Earnings</p>
+              <p className="text-2xl font-bold text-[#7b52d3]">
+                {formatCurrency(totalEarnings)}
+              </p>
+            </div>
+            <div className="bg-white/5 p-4 rounded-lg">
+              <p className="text-gray-400">Goal</p>
+              <p className="text-2xl font-bold text-pink-500">
+                {formatCurrency(goalAmount)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Pending Payments */}
+        <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+          <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Pending Payments</h2>
+          <div className="space-y-4">
+            {pendingCollabs.map((collab, index) => (
+              <div
+                key={index}
+                className="bg-white/5 p-4 rounded-lg flex flex-col gap-2"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300 font-medium">{collab.brandName}</span>
+                  <span className="text-[#7b52d3] font-bold">
+                    {formatCurrency(collab.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Expected: {formatDate(collab.expectedDate)}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    collab.status === 'pending'
+                      ? 'bg-yellow-500/20 text-yellow-500'
+                      : 'bg-blue-500/20 text-blue-500'
+                  }`}>
+                    {collab.status.charAt(0).toUpperCase() + collab.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section - Transactions */}
+      <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+        <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Transaction History</h2>
+        <div className="space-y-4">
+          {transactions.map((transaction) => (
+            <div
+              key={transaction.id}
+              className="bg-white/5 p-4 rounded-lg flex justify-between items-center"
+            >
+              <div className="flex flex-col">
+                <span className="text-gray-300 font-medium">
+                  {transaction.description}
+                </span>
+                <span className="text-gray-400 text-sm">
+                  {formatDate(transaction.date)}
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-[#7b52d3] font-bold">
+                  {formatCurrency(transaction.amount)}
+                </span>
+                <span className="bg-green-500/20 text-green-500 px-2 py-1 rounded-full text-xs">
+                  Completed
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
-    {/* 2. Pending Payments */}
-    <div className="bg-[#181c2f] rounded-xl p-6 shadow border border-[#f7b731] flex flex-col gap-2 mb-4">
-      <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><span role="img" aria-label="pending">⏳</span>Pending Payments</h3>
-      <div className="text-gray-400 text-sm">Offers in payment process</div>
-      <ul className="mt-2 text-gray-300 text-sm space-y-1">
-        {mockWallet.pendingPayments.length > 0 ? (
-          mockWallet.pendingPayments.map((p) => (
-            <li key={p.id}>
-              <span className="font-bold text-[#f7b731]">{p.brand}</span>: ₹{p.amount} ({p.method})
-            </li>
-          ))
-        ) : (
-          <li>No pending payments.</li>
-        )}
-      </ul>
-    </div>
-    {/* 3. Earnings Trend Graph */}
-    <div className="bg-[#181c2f] rounded-xl p-6 shadow border border-[#45aaf2] flex flex-col gap-2 mb-4">
-      <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><span role="img" aria-label="trend">📈</span>Earnings Trend Graph</h3>
-      <div className="text-gray-400 text-sm mb-2">Monthly earnings visualization</div>
-      <ResponsiveContainer width="100%" height={120}>
-        <LineChart data={mockWallet.earningsTrend} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#232946" />
-          <XAxis dataKey="month" stroke="#fff" fontSize={12} />
-          <YAxis stroke="#fff" fontSize={12} />
-          <Tooltip wrapperStyle={{ backgroundColor: '#232946', color: '#fff', borderRadius: 8 }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#45aaf2' }} />
-          <Line type="monotone" dataKey="earnings" stroke="#45aaf2" strokeWidth={3} dot={{ stroke: '#f7b731', strokeWidth: 2 }} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-    {/* 4. AI Projection */}
-    <div className="bg-[#181c2f] rounded-xl p-6 shadow border border-[#20bf6b] flex flex-col gap-2 mb-4">
-      <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><span role="img" aria-label="ai">🤖</span>AI Projection</h3>
-      <div className="text-gray-400 text-sm">Predicted income next month</div>
-      <div className="mt-2 text-2xl font-bold text-[#20bf6b]">₹{mockWallet.aiProjection.toLocaleString()}</div>
-    </div>
-  </div>
-);
+  );
+};
 
 export default Wallet;

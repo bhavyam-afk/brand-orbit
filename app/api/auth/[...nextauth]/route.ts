@@ -1,7 +1,7 @@
 
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import prisma from "../../../../db/prisma";
+import prisma from "../../../../lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions = {
@@ -22,7 +22,7 @@ export const authOptions = {
           id: user.id,
           name: user.email,
           email: user.email,
-          role: user.role
+          role: user.userType
         };
       }
     })

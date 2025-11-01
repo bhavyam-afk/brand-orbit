@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/db/prisma";
+import prisma from "@/lib/prisma";
 
 export async function GET(
   req: Request,
@@ -11,7 +11,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
     // Fetch influencer's packages
-    const influencer = await prisma.influencerProfile.findUnique({
+    const influencer = await prisma.creatorProfile.findUnique({
       where: { username },
       include: { packages: true },
     });

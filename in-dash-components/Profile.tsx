@@ -1,7 +1,20 @@
 "use client" ;
-import React from "react";
 
-type ProfileData = {
+import React from "react";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+interface ProfileData {
   id: string;
   userId: string;
   username: string;
@@ -9,216 +22,178 @@ type ProfileData = {
   bio?: string;
   niche?: string;
   followersCount?: number;
-  platformLinks?: Record<string, string>;
   profilePic?: string;
   avatarUrl?: string;
   location?: string;
   rating?: number;
   createdAt?: string;
   updatedAt?: string;
-  packages?: any[];
-  offers?: any[];
-  payments?: any[];
-  categories?: string;
-  platforms?: Record<string, string>;
-  // Optionals for future
-  engagementRate?: number;
-  verified?: boolean;
-  portfolio?: { brand: string; description: string }[];
-};
+  // Add more fields as needed
+}
 
 interface ProfileProps {
   data: ProfileData;
 }
 
 const Profile: React.FC<ProfileProps> = ({ data }) => {
-  // Mock platform details (replace with API/model fetch later)
-  const platformDetails: Record<string, {
-    followers: number;
-    offers: number;
-    packages: number;
-    bio: string;
-  }> = {
-    instagram: {
-      followers: 12000,
-      offers: 2,
-      packages: 5,
-      bio: "Instagram bio for influencer.",
+  // Mock data for past 3 collaborations, earnings, and followers growth (replace with real API data)
+  const collaborations = [
+    {
+      brand: "TechX",
+      campaign: "TechX Launch",
+      date: "2025-09-10",
+      thumbnail: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=96&h=96&q=80"
     },
-    youtube: {
-      followers: 5000,
-      offers: 1,
-      packages: 2,
-      bio: "YouTube bio for influencer.",
+    {
+      brand: "GlowUp",
+      campaign: "GlowUp Summer",
+      date: "2025-08-15",
+      thumbnail: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=facearea&w=96&h=96&q=80"
     },
-    twitter: {
-      followers: 3000,
-      offers: 0,
-      packages: 1,
-      bio: "Twitter bio for influencer.",
+    {
+      brand: "FitLife",
+      campaign: "FitLife Challenge",
+      date: "2025-07-20",
+      thumbnail: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=96&h=96&q=80"
     },
-  };
+  ];
+  const totalEarnings = [1200, 1500, 1100, 1800, 2000];
+  const followersGrowth = [11000, 11200, 11500, 11800, 12000];
+  const months = ["Jun", "Jul", "Aug", "Sept", "Oct"];
 
-  // Platform logo mapping
-  const platformLogos: Record<string, string> = {
-    instagram: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg",
-    youtube: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg",
-    twitter: "https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitter.svg",
+  // Chart data and options
+  const earningsData = {
+    labels: months,
+    datasets: [
+      {
+        label: "Earnings (₹)",
+        data: totalEarnings,
+        backgroundColor: "rgba(34,211,238,0.7)",
+        borderColor: "#0891b2",
+        borderWidth: 2,
+        borderRadius: 12,
+        barPercentage: 0.7,
+        categoryPercentage: 0.7,
+      },
+    ],
   };
-
-  const [selectedPlatform, setSelectedPlatform] = React.useState<string | null>(null);
-  const handlePlatformClick = (platform: string) => {
-    setSelectedPlatform(platform);
+  const earningsOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: false },
+      tooltip: { enabled: true },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: "#fff" },
+      },
+      y: {
+        grid: { color: "#334155" },
+        ticks: { color: "#fff" },
+        beginAtZero: true,
+      },
+    },
+    elements: {
+      bar: {
+        borderRadius: 12,
+      },
+    },
   };
-  const handleCloseDetails = () => {
-    setSelectedPlatform(null);
+  const followersData = {
+    labels: months,
+    datasets: [
+      {
+        label: "Followers",
+        data: followersGrowth,
+        backgroundColor: "rgba(251,191,36,0.7)",
+        borderColor: "#fbbf24",
+        borderWidth: 2,
+        borderRadius: 12,
+        barPercentage: 0.7,
+        categoryPercentage: 0.7,
+      },
+    ],
+  };
+  const followersOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: false },
+      tooltip: { enabled: true },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: "#fff" },
+      },
+      y: {
+        grid: { color: "#334155" },
+        ticks: { color: "#fff" },
+        beginAtZero: true,
+      },
+    },
+    elements: {
+      bar: {
+        borderRadius: 12,
+      },
+    },
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-gradient-to-br from-[#232946] to-[#2d325a] rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-[#7b52d3]/40">
-      {/* Sidebar Avatar & Basic Info */}
-      <div className="bg-[#181c2f] flex flex-col items-center justify-center p-10 md:w-1/3 w-full min-h-[350px] border-r border-[#7b52d3]/30">
-        <img
-          src={data.avatarUrl || "/profile-placeholder.png"}
-          alt="Profile"
-          className="w-36 h-36 rounded-full border-4 border-[#7b52d3] object-cover shadow-lg mb-4"
-        />
-        <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight flex items-center gap-2">
-          {data.name}
-          {typeof data.rating === 'number' && (
-            <span className="ml-2 text-yellow-400 text-lg" title="Rating">
-              ★ {data.rating}
-            </span>
-          )}
-        </h2>
-        {data.categories && (
-          <span className="bg-[#7b52d3]/20 text-[#7b52d3] px-3 py-1 rounded-full text-xs font-semibold mb-2">
-            {data.categories}
-          </span>
-        )}
-        {data.niche && !data.categories && (
-          <span className="bg-[#7b52d3]/20 text-[#7b52d3] px-3 py-1 rounded-full text-xs font-semibold mb-2">
-            {data.niche}
-          </span>
-        )}
-        {data.location && (
-          <span className="text-gray-400 text-sm mb-2 flex items-center gap-1">
-            <svg width="16" height="16" fill="currentColor" className="inline"><circle cx="8" cy="8" r="8" fill="#7b52d3"/><circle cx="8" cy="8" r="4" fill="#fff"/></svg>
-            {data.location}
-          </span>
-        )}
-        {data.verified && (
-          <span className="inline-flex items-center gap-1 text-green-400 text-xs font-bold bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
-            <svg width="14" height="14" fill="currentColor" className="inline"><circle cx="7" cy="7" r="7" fill="#22c55e"/><path d="M4 7l2 2 4-4" stroke="#fff" strokeWidth="2" fill="none"/></svg>
-            Verified
-          </span>
-        )}
-      {/* Platform Details Modal/Card (rendered at root) */}
-      {selectedPlatform && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-8 min-w-[300px] relative">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800" onClick={handleCloseDetails}>&times;</button>
-            <h4 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <img src={platformLogos[selectedPlatform]} alt={selectedPlatform} className="w-7 h-7" />
-              <span className="capitalize">{selectedPlatform}</span> Details
-            </h4>
-            <div className="flex flex-col gap-2">
-              <div><span className="font-semibold">Followers:</span> {platformDetails[selectedPlatform]?.followers ?? "-"}</div>
-              <div><span className="font-semibold">Offers:</span> {platformDetails[selectedPlatform]?.offers ?? "-"}</div>
-              <div><span className="font-semibold">Packages:</span> {platformDetails[selectedPlatform]?.packages ?? "-"}</div>
-              <div><span className="font-semibold">Bio:</span> {platformDetails[selectedPlatform]?.bio ?? "-"}</div>
-            </div>
-            {/* TODO: Replace with real API/model data */}
+    <div className="w-full h-full flex flex-col items-center justify-center p-8">
+      <div className="flex flex-row gap-8 w-full max-w-6xl">
+        {/* Profile Card */}
+        <div className="flex-1 min-w-[320px] max-w-[400px] bg-cyan-500 rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center h-[520px] mr-4">
+          <div className="w-28 h-28 rounded-full mb-6 overflow-hidden border-4 border-white shadow">
+            {data.profilePic && <img src={data.profilePic} alt="Profile" className="w-full h-full object-cover" />}
           </div>
+          <div className="text-2xl font-bold mb-2">{data.name}</div>
+          <div className="text-base text-black mb-1">{data.followersCount} followers</div>
+          <div className="text-base text-black mb-1">niche - {data.niche}</div>
+          <div className="text-base text-black mb-1">{data.location}</div>
+          <div className="text-base text-black mb-1">Rating: {data.rating}</div>
+          <div className="text-sm text-black mt-4 text-center">{data.bio}</div>
         </div>
-      )}
-      </div>
-      {/* Main Info & Stats */}
-      <div className="flex-1 flex flex-col gap-8 p-10">
-        {/* Bio & Followers */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-bold text-[#7b52d3] mb-1 flex items-center gap-2">
-              <svg width="20" height="20" fill="currentColor" className="inline"><circle cx="10" cy="10" r="10" fill="#7b52d3"/><text x="10" y="15" textAnchor="middle" fontSize="12" fill="#fff">i</text></svg>
-              Bio
-            </h3>
-            <p className="text-gray-200 text-base max-w-xl">
-              {data.bio || <span className="text-gray-500">No bio provided.</span>}
-            </p>
-          </div>
-          <div className="flex flex-row gap-6 items-center">
-            {typeof data.followersCount === 'number' && (
-              <div className="flex flex-col items-center">
-                <span className="text-2xl font-bold text-[#7b52d3]">{data.followersCount.toLocaleString()}</span>
-                <span className="text-xs text-gray-400">Followers</span>
-              </div>
-            )}
-            {typeof data.engagementRate === 'number' && (
-              <div className="flex flex-col items-center">
-                <span className="text-2xl font-bold text-[#7b52d3]">{data.engagementRate}%</span>
-                <span className="text-xs text-gray-400">Engagement</span>
-              </div>
-            )}
-        {/* Extra Info: Show packages, offers, payments counts if available */}
-        <div className="flex flex-row gap-6 items-center mt-4">
-          {Array.isArray(data.packages) && (
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-bold text-[#7b52d3]">{data.packages.length}</span>
-              <span className="text-xs text-gray-400">Packages</span>
-            </div>
-          )}
-          {Array.isArray(data.offers) && (
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-bold text-[#7b52d3]">{data.offers.length}</span>
-              <span className="text-xs text-gray-400">Offers</span>
-            </div>
-          )}
-          {Array.isArray(data.payments) && (
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-bold text-[#7b52d3]">{data.payments.length}</span>
-              <span className="text-xs text-gray-400">Payments</span>
-            </div>
-          )}
-        </div>
-          </div>
-        </div>
-        {/* Connected Platforms */}
-        <div className="bg-[#232946] rounded-xl p-6 shadow border border-[#7b52d3]/30">
-          <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-[#7b52d3]">
-            <svg width="20" height="20" fill="currentColor" className="inline"><circle cx="10" cy="10" r="10" fill="#7b52d3"/><text x="10" y="15" textAnchor="middle" fontSize="12" fill="#fff">🌐</text></svg>
-            Connected Platforms
-          </h3>
-          <ul className="flex flex-wrap gap-4">
-            {data.platforms && Object.entries(data.platforms).length > 0 ? (
-              Object.entries(data.platforms).map(([platform, link], idx) => (
-                <li key={platform + idx} className="flex items-center gap-2 bg-[#7b52d3]/10 px-3 py-1 rounded-full text-sm text-[#7b52d3] font-semibold cursor-pointer" onClick={() => handlePlatformClick(platform.toLowerCase())}>
-                  <img src={platformLogos[platform.toLowerCase()]} alt={platform} className="w-6 h-6" />
-                  <span className="capitalize">{platform}</span>
-                  <a href={link} target="_blank" rel="noopener noreferrer" className="underline text-blue-400 hover:text-blue-200">Visit</a>
-                </li>
-              ))
-            ) : (
-              <li className="text-gray-400">No platforms linked</li>
-            )}
-          </ul>
-        </div>
-        {/* Portfolio Section (optional) */}
-        {data.portfolio && data.portfolio.length > 0 && (
-          <div className="bg-[#232946] rounded-xl p-6 shadow border border-[#7b52d3]/30">
-            <h3 className="font-bold text-lg mb-3 flex items-center gap-2 text-[#7b52d3]">
-              <svg width="20" height="20" fill="currentColor" className="inline"><circle cx="10" cy="10" r="10" fill="#7b52d3"/><text x="10" y="15" textAnchor="middle" fontSize="12" fill="#fff">📁</text></svg>
-              Portfolio
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {data.portfolio.map((item, idx) => (
-                <div key={item.brand + idx} className="bg-[#181c2f] rounded-lg p-4 shadow flex flex-col gap-1 border border-[#7b52d3]/20">
-                  <p className="font-semibold text-[#7b52d3]">{item.brand}</p>
-                  <p className="text-gray-300 text-sm">{item.description}</p>
+
+        <div className="flex-1 flex flex-col gap-6 min-w-[340px]">
+          {/* Past 3 Collaborations */}
+          <div className="bg-cyan-500 rounded-2xl shadow-lg p-6 min-h-[120px] flex flex-col justify-center">
+            <div className="font-semibold mb-4 text-lg">past 3 collaborations</div>
+            <div className="flex flex-row gap-4 justify-between">
+              {collaborations.map((c, i) => (
+                <div key={i} className="bg-white/80 rounded-xl flex flex-col items-center p-3 w-32 shadow-md">
+                  <div className="w-14 h-14 rounded-full overflow-hidden mb-2 border-2 border-cyan-400">
+                    <img src={c.thumbnail} alt={c.brand + ' thumbnail'} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="font-bold text-cyan-700 text-sm mb-1 text-center">{c.brand}</div>
+                  <div className="text-xs text-gray-800 mb-1 text-center">{c.campaign}</div>
+                  <div className="text-xs text-gray-500 text-center">{c.date}</div>
                 </div>
               ))}
             </div>
           </div>
-        )}
+
+          {/* Bar Graphs Row */}
+          <div className="flex flex-row gap-6">
+            {/* Total Earnings (last 5 months) - Bar Graph */}
+            <div className="bg-gray-900 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center w-72 h-72">
+              <div className="font-semibold mb-2 text-lg text-gray-200">total earnings<br />last 5 months</div>
+              <div className="w-full h-48 flex items-center justify-center">
+                <Bar data={earningsData} options={earningsOptions} />
+              </div>
+            </div>
+
+            {/* Followers Growth (last 5 months) - Bar Graph */}
+            <div className="bg-gray-900 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center w-72 h-72">
+              <div className="font-semibold mb-2 text-lg text-gray-200">followers growth<br />last 5 months</div>
+              <div className="w-full h-48 flex items-center justify-center">
+                <Bar data={followersData} options={followersOptions} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

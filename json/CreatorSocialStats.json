@@ -1,0 +1,38 @@
+[
+  {
+    "creatorId": "cl_creator_profile_123",
+    "platform": "instagram",
+    "followers": 15200,
+    "reach": 55000,
+    "engagement": 3100,
+    "engagementRate": 0.056,
+    "timestamp": "2025-10-30T10:00:00.000Z"
+  },
+  {
+    "creatorId": "cl_creator_profile_123",
+    "platform": "instagram",
+    "followers": 14950,
+    "reach": 48000,
+    "engagement": 2900,
+    "engagementRate": 0.06,
+    "timestamp": "2025-10-01T10:00:00.000Z"
+  },
+  {
+    "creatorId": "cl_creator_profile_123",
+    "platform": "instagram",
+    "followers": 14500,
+    "reach": 45000,
+    "engagement": 2800,
+    "engagementRate": 0.062,
+    "timestamp": "2025-09-01T10:00:00.000Z"
+  },
+  {
+    "creatorId": "cl_creator_profile_123",
+    "platform": "tiktok",
+    "followers": 45000,
+    "reach": 250000,
+    "engagement": 15000,
+    "engagementRate": 0.06,
+    "timestamp": "2025-10-30T10:00:00.000Z"
+  }
+]

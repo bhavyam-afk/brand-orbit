@@ -68,5 +68,3 @@ const Navbuttons = ({ type }: NavbuttonsProps) => {
 };
 
 export default Navbuttons;
-
-

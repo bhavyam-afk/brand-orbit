@@ -1,135 +1,246 @@
-generator client {
-  provider = "prisma-client-js"
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                String             @id @default(cuid())
-  email             String             @unique
-  passwordHash      String
-  role              UserRole
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  brandProfile      BrandProfile?
-  influencerProfile InfluencerProfile?
+generator client {
+  provider = "prisma-client-js"
 }
 
-model InfluencerProfile {
-  id             String    @id @default(cuid())
-  userId         String    @unique
-  username       String    @unique
-  bio            String?
-  niche          String?
-  followersCount Int?
-  platformLinks  Json?
-  profilePic     String?
-  location       String?
-  rating         Float?    @default(0)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  offers         Offer[]   @relation("InfluencerOffers")
-  packages       Package[]
-  payments       Payment[] @relation("InfluencerPayments")
-}
+// --- ENUMS ---
+// Enums provide type-safety for specific string fields
 
-model BrandProfile {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  brandName     String
-  industry      String?
-  logoUrl       String?
-  location      String?
-  contactPerson String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  offers        Offer[]   @relation("BrandOffers")
-  payments      Payment[] @relation("BrandPayments")
-}
-
-model Package {
-  id           String            @id @default(cuid())
-  influencerId String
-  title        String
-  description  String?
-  price        Float
-  deliveryTime Int?
-  platform     String?
-  mediaType    MediaType
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  offers       Offer[]
-  influencer   InfluencerProfile @relation(fields: [influencerId], references: [id], onDelete: Cascade)
-}
-
-model Offer {
-  id           String            @id @default(cuid())
-  brandId      String
-  influencerId String
-  packageId    String?
-  offerAmount  Float
-  message      String?
-  status       OfferStatus       @default(PENDING)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  chatMessages ChatMessage[]
-  brand        BrandProfile      @relation("BrandOffers", fields: [brandId], references: [id], onDelete: Cascade)
-  influencer   InfluencerProfile @relation("InfluencerOffers", fields: [influencerId], references: [id], onDelete: Cascade)
-  package      Package?          @relation(fields: [packageId], references: [id])
-  payment      Payment?
-}
-
-model Payment {
-  id           String            @id @default(cuid())
-  amount       Float
-  brandId      String
-  influencerId String
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  offerId      String            @unique
-  platformFee  Float?            @default(0)
-  status       PaymentStatus     @default(PENDING)
-  brand        BrandProfile      @relation("BrandPayments", fields: [brandId], references: [id], onDelete: Cascade)
-  influencer   InfluencerProfile @relation("InfluencerPayments", fields: [influencerId], references: [id], onDelete: Cascade)
-  offer        Offer             @relation(fields: [offerId], references: [id], onDelete: Cascade)
-}
-
-model ChatMessage {
-  id         String   @id @default(cuid())
-  offerId    String
-  senderId   String
-  receiverId String
-  message    String
-  sentAt     DateTime @default(now())
-  offer      Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
-}
-
-enum UserRole {
-  INFLUENCER
+enum UserType {
+  CREATOR
   BRAND
 }
 
-enum MediaType {
-  STORY
-  REEL
-  POST
-  LIVE
+enum PackageStatus {
+  ACTIVE
+  DRAFT
+  DELETED
 }
 
-enum OfferStatus {
+enum CollabStatus {
+  PENDING   // Brand has requested, creator hasn't accepted
+  ACTIVE    // In progress
+  COMPLETED // Finished, awaiting payment/review
+  CANCELLED
+}
+
+enum TransactionType {
+  DEPOSIT     // Brand adds funds
+  WITHDRAWAL  // Creator takes funds out
+  PAYMENT     // Brand pays for a collab (escrow)
+  PAYOUT      // Creator receives collab funds
+  FEE         // Your platform fee
+}
+
+enum TransactionStatus {
   PENDING
-  ACCEPTED
-  REJECTED
   COMPLETED
+  FAILED
 }
 
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
+enum CreatorCategory {
+  NANO
+  MICRO
+  MACRO
+  CELEB
+}
+
+
+// --- CORE MODELS ---
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  userType      UserType
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  creatorProfile CreatorProfile?
+  brandProfile   BrandProfile?
+  wallet         Wallet?
+  transactions   Transaction[]
+}
+
+// --- CREATOR SIDE MODELS ---
+
+model CreatorProfile {
+  id             String    @id @default(cuid())
+  user           User      @relation(fields: [userId], references: [id])
+  userId         String    @unique // 1-to-1 relation with User
+  bio            String?   @db.Text
+  username       String    @unique
+  location       String?
+  niche          String?
+  profilePicUrl  String?
+  introClipUrl   String? // For the 20sec intro clip
+  nicheTags      String[]
+  portfolio      Json?     // Store as [{ "title": "...", "url": "..." }]
+  mlScore        Float?    // Your internal ML score
+  category       CreatorCategory
+  platformLinks  Json?     // Store as [{ "platform": "instagram", "url": "..." }]
+  
+  // Relations
+  packages       Package[]
+  collaborations Collaboration[]
+  transaction   Transaction[]
+  @@index([userId])
+}
+
+model Package {
+  id               String        @id @default(cuid())
+  creator          CreatorProfile @relation(fields: [creatorId], references: [id])
+  creatorId        String
+  title            String
+  description      String?       @db.Text
+  thumbnailUrl     String?
+  mediaType        String        // e.g., "Instagram Post", "TikTok Video"
+  deliverables     String[]      // e.g., ["1 Post", "1 Story"]
+  deliveryTimeDays Int
+  price            Decimal       @db.Decimal(10, 2) // Price for the package
+  status           PackageStatus @default(DRAFT)
+  
+  // Relations
+  collaborations   Collaboration[]
+
+  @@index([creatorId])
+}
+
+// --- BRAND SIDE MODELS ---
+
+model BrandProfile {
+  id           String    @id @default(cuid())
+  user         User      @relation(fields: [userId], references: [id])
+  userId       String    @unique // 1-to-1 relation with User
+  brandName    String
+  logoUrl      String?
+  bio          String?   @db.Text
+  industryTags String[]
+  socialLinks  Json?     // Store as [{ "platform": "website", "url": "..." }]
+
+  // Relations
+  campaigns      Campaign[]
+  collaborations Collaboration[]
+
+  @@index([userId])
+}
+
+model Campaign {
+  id             String    @id @default(cuid())
+  brand          BrandProfile @relation(fields: [brandId], references: [id])
+  brandId        String
+  name           String
+  budget         Decimal?  @db.Decimal(12, 2)
+  startDate      DateTime?
+  endDate        DateTime?
+
+  // Relations
+  collaborations Collaboration[]
+  reports        Report[]
+
+  @@index([brandId])
+}
+
+// --- SHARED MODELS (The Core of your App) ---
+
+model Collaboration {
+  id           String   @id @default(cuid())
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id])
+  creatorId    String
+  brand        BrandProfile @relation(fields: [brandId], references: [id])
+  brandId      String
+  package      Package  @relation(fields: [packageId], references: [id])
+  packageId    String
+  campaign     Campaign? @relation(fields: [campaignId], references: [id])
+  campaignId   String?
+  
+  finalCost    Decimal  @db.Decimal(10, 2) // The agreed-upon price
+  status       CollabStatus @default(PENDING)
+  
+  // Analytics reported AFTER the collab
+  reportedReach      Int?
+  reportedEngagement Int?
+  reportedRoiMetric  Decimal?  @db.Decimal(10, 2)
+  linksToPosts       Json?     // Store as [{ "platform": "instagram", "url": "..." }]
+
+  // Relations
+  reports      Report[]
+  transactions Transaction[] // To link payments to this collab
+
+  @@index([creatorId])
+  @@index([brandId])
+  @@index([packageId])
+  @@index([campaignId])
+}
+
+model Report {
+  id            String    @id @default(cuid())
+  pdfUrl        String    // URL to the generated PDF stored in S3/GCS
+  generatedAt   DateTime  @default(now())
+  
+  campaign      Campaign?  @relation(fields: [campaignId], references: [id])
+  campaignId    String?    // Link to a whole campaign
+  
+  collaboration Collaboration? @relation(fields: [collabId], references: [id])
+  collabId      String?    // Link to a single collab
+
+  @@index([campaignId])
+  @@index([collabId])
+}
+
+
+// --- FINANCIAL MODELS (Critical!) ---
+
+model Wallet {
+  id              String   @id @default(cuid())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String   @unique // 1-to-1 relation with User
+  
+  // These are the "source of truth" for current state
+  // They are updated by a transaction processor
+  currentBalance  Decimal  @default(0) @db.Decimal(12, 2)
+  pendingBalance  Decimal  @default(0) @db.Decimal(12, 2) // Money in escrow
+  
+  // Totals for quick dashboard reads
+  totalEarned     Decimal  @default(0) @db.Decimal(12, 2) // For Creators
+  totalWithdrawn  Decimal  @default(0) @db.Decimal(12, 2) // For Creators
+  totalSpent      Decimal  @default(0) @db.Decimal(12, 2) // For Brands
+  
+  // Relations
+  transactions    Transaction[]
+
+  @@index([userId])
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  creator   CreatorProfile @relation(fields: [creatorId], references: [id])
+  creatorId String
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  walletId  String
+  
+  // This helps find the user without a double join
+  user      User     @relation(fields: [userId], references: [id]) 
+  userId    String
+
+  amount    Decimal  @db.Decimal(12, 2) // Always a positive value
+  type      TransactionType
+  status    TransactionStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  
+  // Link to the collab that triggered this payment/payout
+  collaboration   Collaboration? @relation(fields: [collabId], references: [id])
+  collabId        String?
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([collabId])
 }

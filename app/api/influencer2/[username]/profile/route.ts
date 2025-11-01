@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/db/prisma";
+import prisma from "@/lib/prisma";
 
 export async function GET(
   req: Request,
@@ -22,12 +22,12 @@ export async function GET(
     console.log("[API] Before Prisma query");
     
     // Fetch profile from database
-    const profile = await prisma.influencerProfile.findUnique({
+    const profile = await prisma.creatorProfile.findUnique({
       where: { username },
       include: {
         packages: true,
-        offers: true,
-        payments: true,
+        collaborations: true,
+        transaction: true,
       },
     });
 
@@ -62,17 +62,15 @@ export async function GET(
       name: profile.username, // Use username as name (no name field in schema)
       bio: profile.bio,
       niche: profile.niche,
-      followersCount: profile.followersCount,
+      // followersCount: profile.followersCount,
       platformLinks: platformLinks || {},
-      profilePic: profile.profilePic,
-      avatarUrl: profile.profilePic, // Alias for compatibility
+      profilePic: profile.profilePicUrl,
+      avatarUrl: profile.profilePicUrl, // Alias for compatibility
       location: profile.location,
-      rating: profile.rating,
-      createdAt: profile.createdAt.toISOString(),
-      updatedAt: profile.updatedAt.toISOString(),
+      rating: profile.mlScore,
       packages: profile.packages || [],
-      offers: profile.offers || [],
-      payments: profile.payments || [],
+      offers: profile.collaborations || [],
+      payments: profile.transaction || [],
       // Additional aliases if needed
       categories: profile.niche,
       platforms: platformLinks || {},

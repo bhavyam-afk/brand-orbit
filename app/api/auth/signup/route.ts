@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import prisma from '../../../../db/prisma';
+import prisma from '../../../../lib/prisma';
 
 
 
@@ -21,10 +21,10 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Assign enum value for UserRole
-    let role: 'INFLUENCER' | 'BRAND';
-    if (type === 'brand') role = 'BRAND';
-    else if (type === 'influencer') role = 'INFLUENCER';
+    // Assign enum value for UserType
+    let userType: 'CREATOR' | 'BRAND';
+    if (type === 'brand') userType = 'BRAND';
+    else if (type === 'influencer') userType = 'CREATOR';
     else return NextResponse.json({ error: 'Invalid user type' }, { status: 400 });
 
     // Create user (use passwordHash field)
@@ -32,32 +32,33 @@ export async function POST(req: Request) {
       data: {
         email,
         passwordHash: hashedPassword,
-        role,
+        userType,
       },
     });
 
     // Create related profile
-    if (role === 'BRAND') {
+    if (userType === 'BRAND') {
       await prisma.brandProfile.create({
         data: {
           userId: newUser.id,
           brandName: name,
         },
       });
-    } else if (role === 'INFLUENCER') {
+    } else if (userType === 'CREATOR') {
       // Use email prefix as base username
       let baseUsername = email.split('@')[0];
       let username = baseUsername;
       let suffix = 1;
       // Ensure username is unique
-      while (await prisma.influencerProfile.findUnique({ where: { username } })) {
+      while (await prisma.creatorProfile.findUnique({ where: { username } })) {
         username = `${baseUsername}${suffix}`;
         suffix++;
       }
-      await prisma.influencerProfile.create({
+      await prisma.creatorProfile.create({
         data: {
           userId: newUser.id,
           username,
+          category: 'NANO', // Default category for new creators
         },
       });
     }

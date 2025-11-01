@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/db/prisma";
+import prisma from "@/lib/prisma";
 
 export async function GET(
   req: Request,
@@ -11,14 +11,14 @@ export async function GET(
       return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
     // Fetch influencer's offers (campaigns)
-    const influencer = await prisma.influencerProfile.findUnique({
+    const influencer = await prisma.creatorProfile.findUnique({
       where: { username },
-      include: { offers: true },
+      include: { collaborations: true },
     });
     if (!influencer) {
       return NextResponse.json({ error: "Influencer not found" }, { status: 404 });
     }
-    return NextResponse.json({ campaigns: influencer.offers }, { status: 200 });
+    return NextResponse.json({ campaigns: influencer.collaborations }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

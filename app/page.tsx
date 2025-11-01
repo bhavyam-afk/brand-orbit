@@ -1,8 +1,7 @@
-
-import Navbar from "../components/Navbar";
+import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import Features from "../components/Features";
-import Footer from "../components/Footer";
+import Features from "@/components/Features";
+import Footer from "@/components/Footer";
 
 export const metadata = {
   title: "Brand Orbit - Connect with Top Influencers",
@@ -11,13 +10,13 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <main className="space-bg min-h-screen text-white">
+    <main className="min-h-screen">
 
       <Navbar />
       <Hero />
       <Features />
       <Footer />
-      
+     
     </main>
   );
 }

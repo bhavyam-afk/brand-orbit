@@ -1,178 +1,255 @@
 
-import React from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, BarChart, Bar, XAxis, YAxis } from 'recharts';
+'use client'
+
+import React from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar, Line, Pie } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 type Analytics = {
   followersCount?: number;
   engagementRate?: number;
-  audienceGrowth?: number[];
-  postFrequency?: number;
-  contentTypeSplit?: { type: string; value: number }[];
-  topPosts?: { thumbnail: string; likes: number; comments: number }[];
   demographics?: {
     location?: string;
     niche?: string;
+    gender?: {
+      male: number;
+      female: number;
+      other: number;
+    };
+    age?: {
+      '13-17': number;
+      '18-24': number;
+      '25-34': number;
+      '35-44': number;
+      '45plus': number;
+    };
   };
-  contentQualityScore?: number;
-  authenticityIndex?: number;
-  audienceDemographicsPrediction?: string;
-  audienceDemographicsChart?: { group: string; value: number }[];
-  nicheStrengthScore?: number;
-  brandMatchProbability?: number;
-  campaignROIForecast?: number;
+  historicalData?: {
+    followers: number[];
+    engagement: number[];
+    impressions: number[];
+    dates: string[];
+  };
+  collaborations?: Array<{
+    brand: string;
+    roi: number;
+  }>;
 };
 
 interface AnalyticsDashboardProps {
   analytics?: Analytics;
 }
 
-export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytics }) => {
-  // Vibrant fake data for all metrics
-  const dummy = {
-    followersCount: 10000,
-    engagementRate: 4.2,
-    audienceGrowth: [10000, 12050, 13100, 15200, 10300, 10400, 20500, 22000 ,24599],
-    postFrequency: 7,
-    contentTypeSplit: [
-      { type: 'Reels', value: 50 },
-      { type: 'Posts', value: 30 },
-      { type: 'Stories', value: 20 },
-    ],
-    topPosts: [
-      { thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=60&h=60', likes: 1200, comments: 320 },
-      { thumbnail: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=60&h=60', likes: 980, comments: 210 },
-      { thumbnail: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=60&h=60', likes: 870, comments: 180 },
-    ],
-    demographics: { location: 'Mumbai', niche: 'Travel' },
-    contentQualityScore: 93,
-    authenticityIndex: 88,
-    audienceDemographicsPrediction: '21-30, Male, Tier 1 Cities',
-    audienceDemographicsChart: [
-      { group: '18-24', value: 40 },
-      { group: '25-34', value: 35 },
-      { group: 'Male', value: 60 },
-      { group: 'Female', value: 40 },
-      { group: 'Tier 1', value: 50 },
-      { group: 'Tier 2', value: 30 },
-      { group: 'Tier 3', value: 20 },
-    ],
-    nicheStrengthScore: 85,
-    brandMatchProbability: 82,
-    campaignROIForecast: 74,
-  };
-  // Bar chart colors
-  const barColors = ['#45aaf2', '#f7b731', '#20bf6b', '#ff6b6b', '#8854d0', '#fd9644', '#a55eea'];
-  // Always use dummy data for charts if missing
-  const data = {
-    ...dummy,
-    ...analytics,
-    audienceGrowth: analytics?.audienceGrowth && analytics.audienceGrowth.length > 0 ? analytics.audienceGrowth : dummy.audienceGrowth,
-    contentTypeSplit: analytics?.contentTypeSplit && analytics.contentTypeSplit.length > 0 ? analytics.contentTypeSplit : dummy.contentTypeSplit,
-    topPosts: analytics?.topPosts && analytics.topPosts.length > 0 ? analytics.topPosts : dummy.topPosts,
-    audienceDemographicsChart: analytics?.audienceDemographicsChart && analytics.audienceDemographicsChart.length > 0 ? analytics.audienceDemographicsChart : dummy.audienceDemographicsChart,
-  };
-  // Vibrant chart colors
-  const pieColors = ['#ff6b6b', '#f7b731', '#45aaf2'];
-  const radarColor = '#20bf6b';
+// Mock data - Replace with actual data from your DB when available
+const mockData = {
+  followersHistory: {
+    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+    data: [1000, 1500, 2200, 3000],
+  },
+  engagementVsImpression: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+    engagement: [4.2, 3.8, 5.1, 4.9, 5.3],
+    impression: [8.1, 7.9, 8.4, 8.2, 8.8],
+  },
+  demographics: {
+    gender: {
+      labels: ['Male', 'Female', 'Other'],
+      data: [45, 50, 5],
+    },
+    age: {
+      labels: ['13-17', '18-24', '25-34', '35-44', '45+'],
+      data: [10, 35, 30, 15, 10],
+    },
+  },
+  topCollaborations: [
+    { brand: 'Brand A', roi: '2.5x' },
+    { brand: 'Brand B', roi: '2.1x' },
+    { brand: 'Brand C', roi: '1.8x' },
+  ],
+};
 
-  // Radar chart data
-  const radarData = [
-    { metric: 'Quality', value: data.contentQualityScore ?? 0 },
-    { metric: 'Authenticity', value: data.authenticityIndex ?? 0 },
-    { metric: 'Niche Strength', value: data.nicheStrengthScore ?? 0 },
-    { metric: 'Brand Match', value: data.brandMatchProbability ?? 0 },
-    { metric: 'ROI', value: data.campaignROIForecast ?? 0 },
-  ];
+export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytics }) => {
+  // Use analytics data when available, fall back to mock data when needed
+  const data = {
+    followers: analytics?.historicalData?.followers || mockData.followersHistory.data,
+    dates: analytics?.historicalData?.dates || mockData.followersHistory.labels,
+    engagement: analytics?.historicalData?.engagement || mockData.engagementVsImpression.engagement,
+    impressions: analytics?.historicalData?.impressions || mockData.engagementVsImpression.impression,
+    gender: analytics?.demographics?.gender || mockData.demographics.gender,
+    age: analytics?.demographics?.age || mockData.demographics.age,
+  };
 
   return (
-  <div className="bg-gradient-to-br from-[#232946] to-[#3d1c5a] rounded-2xl shadow-2xl p-8 flex flex-col gap-8 border border-[#7b52d3]">
-      <h2 className="text-3xl font-extrabold mb-6 flex items-center gap-3 text-[#ff6b6b]">
-        <span role="img" aria-label="analytics">📊</span>Analytics Dashboard
-      </h2>
-      {/* Core Metrics */}
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div className="flex flex-col gap-4">
-          <div className="text-xl text-[#f7b731] font-bold mb-2">Instagram Core Metrics</div>
-          <div>Followers: <span className="text-[#ff6b6b] font-extrabold">{data.followersCount}</span></div>
-          <div>Engagement Rate: <span className="text-[#45aaf2] font-extrabold">{data.engagementRate}%</span></div>
-          <div>Post Frequency: <span className="text-[#f7b731] font-extrabold">{data.postFrequency} / week</span></div>
-          <div>Location: <span className="text-[#45aaf2] font-bold">{data.demographics?.location ?? 'N/A'}</span></div>
-          <div>Niche: <span className="text-[#20bf6b] font-bold">{data.demographics?.niche ?? 'N/A'}</span></div>
-          {/* Audience Growth Trend (Sparkline) */}
-          <div className="mt-4 bg-[#1e1e2f] rounded-xl p-3 shadow-lg">
-            <div className="text-sm text-gray-200 mb-1">Audience Growth Trend</div>
-            <ResponsiveContainer width="100%" height={120}>
-              <LineChart data={data.audienceGrowth.map((v, i) => ({ day: i + 1, value: v }))} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
-                <Line type="monotone" dataKey="value" stroke="#f7b731" strokeWidth={3} dot={{ stroke: '#ff6b6b', strokeWidth: 2 }} />
-                <Tooltip wrapperStyle={{ backgroundColor: '#232946', color: '#fff', borderRadius: 8 }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#f7b731' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          {/* Content Type Split (Pie Chart) */}
-          <div className="mt-4 bg-[#1e1e2f] rounded-xl p-3 shadow-lg">
-            <div className="text-sm text-gray-200 mb-1">Content Type Split</div>
-            <ResponsiveContainer width="100%" height={120}>
-              <PieChart>
-                <Pie data={data.contentTypeSplit} dataKey="value" nameKey="type" cx="50%" cy="50%" outerRadius={40} label={({ name }) => name} labelLine={false}>
-                  {data.contentTypeSplit.map((entry: { type: string; value: number }, idx: number) => (
-                    <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip wrapperStyle={{ backgroundColor: '#232946', color: '#fff', borderRadius: 8 }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#ff6b6b' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          {/* Top Posts Thumbnails */}
-          <div className="mt-4">
-            <div className="text-sm text-gray-400 mb-1">Top Posts</div>
-            <div className="flex gap-4">
-              {(data.topPosts ?? []).map((post, idx) => (
-                <div key={idx} className="flex flex-col items-center bg-[#1e272e] rounded-xl p-2 shadow-lg">
-                  <img src={post.thumbnail} alt={`Top Post ${idx + 1}`} className="rounded-lg shadow w-16 h-16 object-cover border-2 border-[#f7b731]" />
-                  <span className="text-xs text-[#ff6b6b] font-bold mt-1">{post.likes} ❤</span>
-                  <span className="text-xs text-[#45aaf2]">{post.comments} 💬</span>
-                </div>
-              ))}
+    <div className="bg-[#232946] rounded-2xl shadow-lg p-8 flex flex-col gap-8 border border-[#7b52d3]">
+      {/* Top Section */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Follower Growth Chart */}
+        <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+          <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Follower Growth</h2>
+          <Bar
+            data={{
+              labels: data.dates,
+              datasets: [
+                {
+                  label: 'Weekly Followers',
+                  data: data.followers,
+                  backgroundColor: 'rgba(123, 82, 211, 0.6)',
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                title: { display: true, text: 'Weekly Follower Growth' },
+              },
+            }}
+          />
+        </div>
+
+        {/* Engagement vs Impression Rate Chart */}
+        <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+          <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Engagement vs Impression Rate</h2>
+          <Line
+            data={{
+              labels: data.dates,
+              datasets: [
+                {
+                  label: 'Engagement Rate',
+                  data: data.engagement,
+                  borderColor: 'rgba(123, 82, 211, 1)',
+                  tension: 0.4,
+                },
+                {
+                  label: 'Impression Rate',
+                  data: data.impressions,
+                  borderColor: 'rgba(255, 99, 132, 1)',
+                  tension: 0.4,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                title: { display: true, text: 'Performance Metrics' },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Bottom Section */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Top Reach & Impressions */}
+        <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+          <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Performance Summary</h2>
+          <div className="space-y-4 text-gray-300">
+            <div>
+              <h3 className="font-semibold">Top Reach</h3>
+              <p className="text-2xl text-[#7b52d3]">125K</p>
+            </div>
+            <div>
+              <h3 className="font-semibold">Top Impressions</h3>
+              <p className="text-2xl text-[#7b52d3]">250K</p>
+            </div>
+            <div className="mt-4 p-4 bg-white/5 rounded-lg">
+              <h3 className="font-semibold mb-2">AI Summary</h3>
+              <p className="text-sm">
+                Your content shows strong engagement with consistent growth in reach.
+                Peak performance occurs during evening posts with lifestyle content
+                generating highest engagement.
+              </p>
             </div>
           </div>
         </div>
-  {/* Smart AI Analytics */}
-        <div className="flex flex-col gap-4">
-          <div className="text-xl text-[#20bf6b] font-bold mb-2">Smart AI Analytics</div>
-          <div>Content Quality Score: <span className="text-[#ff6b6b] font-extrabold">{data.contentQualityScore}</span></div>
-          <div>Authenticity Index: <span className="text-[#f7b731] font-extrabold">{data.authenticityIndex}</span></div>
-          <div>Audience Demographics Prediction: <span className="text-[#45aaf2] font-bold">{data.audienceDemographicsPrediction}</span></div>
-          {/* Demographics Bar Chart */}
-          <div className="mt-4">
-            <div className="text-sm text-gray-400 mb-1">Demographics Split</div>
-            <ResponsiveContainer width="100%" height={140}>
-              <BarChart data={data.audienceDemographicsChart ?? []}>
-                <Tooltip />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                  {(data.audienceDemographicsChart ?? []).map((entry: { group: string; value: number }, idx: number) => (
-                    <Cell key={`cell-bar-${idx}`} fill={barColors[idx % barColors.length]} />
-                  ))}
-                </Bar>
-                <XAxis dataKey="group" stroke="#fff" fontSize={12} />
-                <YAxis stroke="#fff" fontSize={12} />
-              </BarChart>
-            </ResponsiveContainer>
+
+        {/* Audience Demographics */}
+        <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+          <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Audience Demographics</h2>
+          <div className="grid grid-rows-2 gap-4">
+            <Pie
+              data={{
+                labels: mockData.demographics.gender.labels,
+                datasets: [
+                  {
+                    data: mockData.demographics.gender.data,
+                    backgroundColor: [
+                      'rgba(123, 82, 211, 0.6)',
+                      'rgba(255, 99, 132, 0.6)',
+                      'rgba(75, 192, 192, 0.6)',
+                    ],
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  title: { display: true, text: 'Gender Distribution' },
+                },
+              }}
+            />
+            <Pie
+              data={{
+                labels: mockData.demographics.age.labels,
+                datasets: [
+                  {
+                    data: mockData.demographics.age.data,
+                    backgroundColor: [
+                      'rgba(255, 99, 132, 0.6)',
+                      'rgba(123, 82, 211, 0.6)',
+                      'rgba(255, 206, 86, 0.6)',
+                      'rgba(75, 192, 192, 0.6)',
+                      'rgba(153, 102, 255, 0.6)',
+                    ],
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  title: { display: true, text: 'Age Distribution' },
+                },
+              }}
+            />
           </div>
-          <div>Niche Strength Score: <span className="text-[#20bf6b] font-extrabold">{data.nicheStrengthScore}</span></div>
-          <div>Brand Match Probability: <span className="text-[#20bf6b] font-extrabold">{data.brandMatchProbability}%</span></div>
-          <div>Campaign ROI Forecast: <span className="text-[#f7b731] font-extrabold">{data.campaignROIForecast}%</span></div>
-          {/* Influencer Health Card (Radar Chart) */}
-          <div className="mt-4">
-            <div className="text-sm text-gray-400 mb-1">Influencer Health Card</div>
-            <ResponsiveContainer width="100%" height={240}>
-              <RadarChart cx="50%" cy="50%" outerRadius={90} data={radarData}>
-                <PolarGrid stroke="#45aaf2" />
-                <PolarAngleAxis dataKey="metric" stroke="#f7b731" />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#ff6b6b" />
-                <Radar name="Scores" dataKey="value" stroke={radarColor} fill={radarColor} fillOpacity={0.5} />
-                <Tooltip />
-              </RadarChart>
-            </ResponsiveContainer>
+        </div>
+
+        {/* Top Collaborations */}
+        <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
+          <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Top Collaborations ROI</h2>
+          <div className="space-y-4">
+            {mockData.topCollaborations.map((collab, index) => (
+              <div
+                key={index}
+                className="flex justify-between items-center p-3 bg-white/5 rounded-lg text-gray-300"
+              >
+                <span className="font-medium">{collab.brand}</span>
+                <span className="text-[#7b52d3]">{collab.roi}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
