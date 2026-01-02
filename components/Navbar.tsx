@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
+import { useState } from "react";
 import Navbuttons from "./Navbuttons";
-import { NavBar } from "@/components/ui/tubelight-navbar";
+import { NavBaro } from "@/components/ui/tubelight-navbar";
 import { Rocket, Briefcase, Users, Star, HelpCircle, } from "lucide-react";
 
 const navItems = [
@@ -33,7 +34,6 @@ const navItems = [
     },
 ];
 
-import { useState } from "react";
 
 type DropdownKey = "Programs" | "Success Stories" | "Why BrandOrbit";
 interface DropdownItem { label: string; href: string; }
@@ -74,9 +74,8 @@ const Navbar = () => {
                                 onMouseLeave={() => setHovered(null)}
                             >
                                 {/* Use tubelight NavBar tab styling and lamp effect */}
-                                <NavBar
+                                <NavBaro
                                     items={[item]}
-                                    className=""
                                 />
                                 {/* Dropdown */}
                                 {hasDropdown && hovered === item.name && (

@@ -18,7 +18,7 @@ interface NavBarProps {
 }
 
 
-export function NavBar({ items, className }: NavBarProps) {
+export function NavBaro({ items, className }: NavBarProps) {
   const [activeTab, setActiveTab] = useState(items[0].name)
   const [hoveredTab, setHoveredTab] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)

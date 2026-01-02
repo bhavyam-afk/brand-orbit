@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
+import { signIn, getSession } from "next-auth/react";
 
 interface LoginCardProps {
   userType: "brand" | "influencer";
@@ -15,41 +16,89 @@ const LoginCard = ({ userType }: LoginCardProps) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, type: userType }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Login failed");
-        return;
-      }
-  router.push(`/${userType}/${data.user.name}/dashboard`);
-    } catch (err: any) {
-      setError("Login failed. Try again.");
+
+    // 1️⃣ Login WITHOUT redirect
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (!res || res.error) {
+      setError("Invalid email or password");
+      return;
     }
+
+    // 2️⃣ Fetch session AFTER login
+    const session = await getSession();
+
+    if (!session?.user) {
+      setError("Unable to fetch session");
+      return;
+    }
+
+    const { username, role } = session.user as {
+      username: string;
+      role: "CREATOR" | "BRAND";
+    };
+
+    // 3️⃣ Validate role vs login page
+    if (
+      (userType === "brand" && role !== "BRAND") ||
+      (userType === "influencer" && role !== "CREATOR")
+    ) {
+      setError("You are logging in from the wrong portal");
+      return;
+    }
+
+    // 4️⃣ Redirect dynamically
+    const basePath = role === "BRAND" ? "brand" : "influencer";
+
+    router.push(`/${basePath}/${username}/dashboard`);
   }
 
   return (
     <div className="bg-[#222] rounded-2xl shadow-2xl p-10 w-[400px] max-w-full text-white flex flex-col gap-6">
-      <h2 className="text-3xl font-bold mb-2 text-center">Login {userType === "brand" ? "as Brand" : "as Influencer"}</h2>
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      <h2 className="text-3xl font-bold mb-2 text-center">
+        Login {userType === "brand" ? "as Brand" : "as Influencer"}
+      </h2>
 
-        <input type="email" placeholder="Email" className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
-          value={email} onChange={e => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Password" className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
-          value={password} onChange={e => setPassword(e.target.value)} required />
+      <form className="flex flex-col gap-4" onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="Email"
+          className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
-  <LiquidButton type="submit" className="mt-4 w-full">Login</LiquidButton>
-        {error && <div className="text-red-400 text-sm text-center mt-2">{error}</div>}
-        
+        <input
+          type="password"
+          placeholder="Password"
+          className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <LiquidButton type="submit" className="mt-4 w-full">
+          Login
+        </LiquidButton>
+
+        {error && (
+          <div className="text-red-400 text-sm text-center mt-2">
+            {error}
+          </div>
+        )}
       </form>
-      <div className="text-sm text-gray-400 text-center">Forgot your password?</div>
+
+      <div className="text-sm text-gray-400 text-center">
+        Forgot your password?
+      </div>
     </div>
   );
 };

@@ -58,7 +58,8 @@ enum CreatorCategory {
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
-  passwordHash  String
+  username      String   @unique
+  passwordHash  String 
   userType      UserType
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -89,9 +90,10 @@ model CreatorProfile {
   platformLinks  Json?     // Store as [{ "platform": "instagram", "url": "..." }]
   
   // Relations
-  packages       Package[]
-  collaborations Collaboration[]
-  transaction   Transaction[]
+  packages          Package[]
+  collaborations    Collaboration[]
+  transaction       Transaction[]
+  followerSnapshots CreatorFollowerSnapshot[]
   @@index([userId])
 }
 
@@ -105,11 +107,11 @@ model Package {
   mediaType        String        // e.g., "Instagram Post", "TikTok Video"
   deliverables     String[]      // e.g., ["1 Post", "1 Story"]
   deliveryTimeDays Int
-  price            Decimal       @db.Decimal(10, 2) // Price for the package
+  price            Decimal       @db.Decimal(10, 2) // Price for the package 
   status           PackageStatus @default(DRAFT)
   
   // Relations
-  collaborations   Collaboration[]
+  collaborations   Collaboration[] 
 
   @@index([creatorId])
 }
@@ -120,7 +122,7 @@ model BrandProfile {
   id           String    @id @default(cuid())
   user         User      @relation(fields: [userId], references: [id])
   userId       String    @unique // 1-to-1 relation with User
-  brandName    String
+  username     String
   logoUrl      String?
   bio          String?   @db.Text
   industryTags String[]
@@ -243,4 +245,15 @@ model Transaction {
   @@index([walletId])
   @@index([userId])
   @@index([collabId])
+}
+
+model CreatorFollowerSnapshot {
+  id         String   @id @default(cuid())
+  creatorId  String
+  followers  Int
+  recordedAt DateTime @default(now())
+
+  creator    CreatorProfile @relation(fields: [creatorId], references: [id])
+
+  @@index([creatorId, recordedAt])
 }

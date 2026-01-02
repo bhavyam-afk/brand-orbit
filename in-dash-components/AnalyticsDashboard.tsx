@@ -30,33 +30,16 @@ ChartJS.register(
 );
 
 type Analytics = {
-  followersCount?: number;
-  engagementRate?: number;
-  demographics?: {
-    location?: string;
-    niche?: string;
-    gender?: {
-      male: number;
-      female: number;
-      other: number;
-    };
-    age?: {
-      '13-17': number;
-      '18-24': number;
-      '25-34': number;
-      '35-44': number;
-      '45plus': number;
-    };
-  };
-  historicalData?: {
-    followers: number[];
-    engagement: number[];
-    impressions: number[];
-    dates: string[];
-  };
-  collaborations?: Array<{
-    brand: string;
-    roi: number;
+  totalEarnings: number;
+  completedCollabs: number;
+  averageEngagement: number;
+  recentCollaborations: Array<{
+    id: string;
+    packageTitle: string;
+    status: string;
+    finalCost: number;
+    reportedReach?: number;
+    reportedEngagement?: number;
   }>;
 };
 
@@ -92,15 +75,53 @@ const mockData = {
   ],
 };
 
-export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytics }) => {
-  // Use analytics data when available, fall back to mock data when needed
+export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytics: initialAnalytics }) => {
+  const [analytics, setAnalytics] = React.useState<Analytics | null>(initialAnalytics || null);
+  const [loading, setLoading] = React.useState(!initialAnalytics);
+
+  React.useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const username = window.location.pathname.split('/')[2]; // Get username from URL
+        const response = await fetch(`/api/influencer2/${username}/analytics`);
+        const data = await response.json();
+        if (response.ok) {
+          setAnalytics(data);
+        } else {
+          console.error('Failed to fetch analytics:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!initialAnalytics) {
+      fetchAnalytics();
+    }
+  }, [initialAnalytics]);
+
+  if (loading) {
+    return <div className="text-center py-8">Loading analytics...</div>;
+  }
+
+  // If analytics is missing or some fields are undefined, provide safe defaults
+  const safeAnalytics = {
+    totalEarnings: analytics?.totalEarnings ?? 0,
+    completedCollabs: analytics?.completedCollabs ?? 0,
+    averageEngagement: analytics?.averageEngagement ?? 0,
+    recentCollaborations: analytics?.recentCollaborations ?? [],
+  };
+
+  // Use analytics data when available, fall back to mock data for visualization
   const data = {
-    followers: analytics?.historicalData?.followers || mockData.followersHistory.data,
-    dates: analytics?.historicalData?.dates || mockData.followersHistory.labels,
-    engagement: analytics?.historicalData?.engagement || mockData.engagementVsImpression.engagement,
-    impressions: analytics?.historicalData?.impressions || mockData.engagementVsImpression.impression,
-    gender: analytics?.demographics?.gender || mockData.demographics.gender,
-    age: analytics?.demographics?.age || mockData.demographics.age,
+    followers: mockData.followersHistory.data, // Keep mock data for follower chart
+    dates: mockData.followersHistory.labels,
+    engagement: Array(5).fill(safeAnalytics.averageEngagement), // Use real average engagement
+    impressions: mockData.engagementVsImpression.impression, // Keep mock data for impressions
+    gender: mockData.demographics.gender, // Keep mock demographics for now
+    age: mockData.demographics.age,
   };
 
   return (
@@ -168,19 +189,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytic
           <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Performance Summary</h2>
           <div className="space-y-4 text-gray-300">
             <div>
-              <h3 className="font-semibold">Top Reach</h3>
-              <p className="text-2xl text-[#7b52d3]">125K</p>
+              <h3 className="font-semibold">Total Earnings</h3>
+              <p className="text-2xl text-[#7b52d3]">${safeAnalytics.totalEarnings.toLocaleString()}</p>
             </div>
             <div>
-              <h3 className="font-semibold">Top Impressions</h3>
-              <p className="text-2xl text-[#7b52d3]">250K</p>
+              <h3 className="font-semibold">Completed Collaborations</h3>
+              <p className="text-2xl text-[#7b52d3]">{safeAnalytics.completedCollabs}</p>
             </div>
             <div className="mt-4 p-4 bg-white/5 rounded-lg">
-              <h3 className="font-semibold mb-2">AI Summary</h3>
+              <h3 className="font-semibold mb-2">Performance Summary</h3>
               <p className="text-sm">
-                Your content shows strong engagement with consistent growth in reach.
-                Peak performance occurs during evening posts with lifestyle content
-                generating highest engagement.
+                Your average engagement rate is {safeAnalytics.averageEngagement.toFixed(1)}%.
+                You've completed {safeAnalytics.completedCollabs} collaborations with a total
+                earning of ${safeAnalytics.totalEarnings.toLocaleString()}.
               </p>
             </div>
           </div>
@@ -241,13 +262,20 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ analytic
         <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
           <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Top Collaborations ROI</h2>
           <div className="space-y-4">
-            {mockData.topCollaborations.map((collab, index) => (
+            {safeAnalytics.recentCollaborations.map((collab) => (
               <div
-                key={index}
+                key={collab.id}
                 className="flex justify-between items-center p-3 bg-white/5 rounded-lg text-gray-300"
               >
-                <span className="font-medium">{collab.brand}</span>
-                <span className="text-[#7b52d3]">{collab.roi}</span>
+                <span className="font-medium">{collab.packageTitle}</span>
+                <div className="text-right">
+                  <span className="text-[#7b52d3] block">${Number(collab.finalCost).toLocaleString()}</span>
+                  <span className="text-sm opacity-70">
+                    {collab.reportedEngagement 
+                      ? `${collab.reportedEngagement}% engagement`
+                      : collab.status}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

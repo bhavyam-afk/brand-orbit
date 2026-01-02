@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Profile2 from "@/in-dash-components/Profile2";
+import Profile from "@/in-dash-components/Profile";
 import ListPackages from "@/in-dash-components/ListPackages";
 import AnalyticsDashboard from "@/in-dash-components/AnalyticsDashboard";
 import Campaigns from "@/in-dash-components/Campaigns";
@@ -70,10 +70,11 @@ const InfluencerDashboard = () => {
             setCampaigns(data.campaigns || []);
             break;
           case "Settings":
-            res = await fetch(`/api/influencer2/${username}/settingss`);
+            res = await fetch(`/api/influencer2/${username}/settings`);
             if (!res.ok) throw new Error("Failed to fetch settings");
             data = await res.json();
-            setSettings(data.settings || null);
+            // API returns the settings object directly
+            setSettings(data || null);
             break;
           default:
             break;
@@ -186,11 +187,8 @@ const InfluencerDashboard = () => {
           </div>
         )}
         {error && <div className="text-red-500">{error}</div>}
-        {!loading && !error && activeSection === "Profile" && profile && (
-          <Profile2 data={profile} />
-        )}
-        {!loading && !error && activeSection === "Profile" && !profile && (
-          <div className="text-gray-400">No profile data available.</div>
+        {!loading && !error && activeSection === "Profile" && (
+          <Profile initialData={profile} />
         )}
         {!loading && !error && activeSection === "List Packages" && (
           <ListPackages packages={packages} />
@@ -199,13 +197,13 @@ const InfluencerDashboard = () => {
           <AnalyticsDashboard analytics={analytics} />
         )}
         {!loading && !error && activeSection === "Campaigns" && (
-          <Campaigns campaigns={campaigns} />
+          <Campaigns initialCampaigns={campaigns} />
         )}
         {!loading && !error && activeSection === "Wallet" && (
           <Wallet />
         )}
         {!loading && !error && activeSection === "Settings" && (
-          <Settings settings={settings} />
+          <Settings initialSettings={settings} />
         )}
       </div>
     </div>

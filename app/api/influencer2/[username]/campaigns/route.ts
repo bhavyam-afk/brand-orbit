@@ -6,20 +6,57 @@ export async function GET(
   { params }: { params: { username: string } }
 ) {
   try {
-    const { username } = params;
-    if (!username || typeof username !== "string") {
+    const { username } = await params;
+    if (!username) {
       return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
-    // Fetch influencer's offers (campaigns)
-    const influencer = await prisma.creatorProfile.findUnique({
+
+    const creator = await prisma.creatorProfile.findUnique({
       where: { username },
-      include: { collaborations: true },
+      select: {
+        collaborations: {
+          where: {
+            status: "COMPLETED",
+          },
+          take: 3,
+          select: {
+            id: true,
+            finalCost: true,
+
+            brand: {
+              select: {
+                username: true,
+                logoUrl: true,
+              },
+            },
+
+            campaign: {
+              select: {
+                name: true,
+              },
+            },
+
+            package: {
+              select: {
+                title: true,
+                thumbnailUrl: true,
+              },
+            },
+          },
+        },
+      },
     });
-    if (!influencer) {
+
+    if (!creator) {
       return NextResponse.json({ error: "Influencer not found" }, { status: 404 });
     }
-    return NextResponse.json({ campaigns: influencer.collaborations }, { status: 200 });
+
+    return NextResponse.json(
+      { collaborations: creator.collaborations },
+      { status: 200 }
+    );
   } catch (error) {
+    console.error("[COLLAB ERROR]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

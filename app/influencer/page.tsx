@@ -9,7 +9,7 @@ import React from 'react'
 const page = () => {
   return (
     <div>
-      
+      page about what it adds to creators. 
     </div>
   )
 }

@@ -1,4 +1,4 @@
-"use client" ;
+"use client";
 
 import React from "react";
 import { Bar } from "react-chartjs-2";
@@ -10,117 +10,145 @@ import {
   Title,
   Tooltip,
   Legend,
+  type ChartOptions,
 } from "chart.js";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface ProfileData {
-  id: string;
-  userId: string;
   username: string;
-  name: string;
-  bio?: string;
-  niche?: string;
-  followersCount?: number;
-  profilePic?: string;
-  avatarUrl?: string;
-  location?: string;
-  rating?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  // Add more fields as needed
+  bio: string | null;
+  location: string | null;
+  niche: string | null;
+  profilePicUrl: string | null;
+  introClipUrl: string | null;
+  nicheTags: string[];
+  portfolio: any | null;
+  category: string;
+  platformLinks: any | null;
+  email: string;
 }
 
 interface ProfileProps {
-  data: ProfileData;
+  initialData?: ProfileData;
 }
 
-const Profile: React.FC<ProfileProps> = ({ data }) => {
-  // Mock data for past 3 collaborations, earnings, and followers growth (replace with real API data)
-  const collaborations = [
-    {
-      brand: "TechX",
-      campaign: "TechX Launch",
-      date: "2025-09-10",
-      thumbnail: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=96&h=96&q=80"
-    },
-    {
-      brand: "GlowUp",
-      campaign: "GlowUp Summer",
-      date: "2025-08-15",
-      thumbnail: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=facearea&w=96&h=96&q=80"
-    },
-    {
-      brand: "FitLife",
-      campaign: "FitLife Challenge",
-      date: "2025-07-20",
-      thumbnail: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=96&h=96&q=80"
-    },
-  ];
-  const totalEarnings = [1200, 1500, 1100, 1800, 2000];
-  const followersGrowth = [11000, 11200, 11500, 11800, 12000];
-  const months = ["Jun", "Jul", "Aug", "Sept", "Oct"];
+const Profile: React.FC<ProfileProps> = ({ initialData }) => {
+  const [data, setData] = React.useState<ProfileData | null>(initialData || null);
+  const [loading, setLoading] = React.useState(!initialData);
+  const [earningsMonths, setEarningsMonths] = React.useState<string[]>([]);
+  const [earningsTotals, setEarningsTotals] = React.useState<number[]>([]);
+  const [collaborations, setCollaborations] = React.useState<any[]>([]);
+  const [followersMonths, setFollowersMonths] = React.useState<string[]>([]);
+  const [followersTotals, setFollowersTotals] = React.useState<number[]>([]);
 
-  // Chart data and options
-  const earningsData = {
-    labels: months,
+  React.useEffect(() => {
+    const username = window.location.pathname.split("/")[2];
+    if (!username) return;
+
+    // 1️⃣ Fetch profile ONLY if initialData not provided
+    if (!initialData) {
+      fetch(`/api/influencer2/${username}/profile`)
+        .then(res => res.json())
+        .then(setData)
+        .catch(err => console.error("profile fetch failed", err))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+
+    // 2️⃣ ALWAYS fetch earnings
+    fetch(`/api/influencer2/${username}/earnings`)
+      .then(res => res.json())
+      .then(earnJson => {
+        const months = Array.isArray(earnJson.months) ? earnJson.months : [];
+        const totals = Array.isArray(earnJson.totals) ? earnJson.totals.map((n: any) => Number(n) || 0) : [];
+        setEarningsMonths(months);
+        setEarningsTotals(totals);
+      })
+      .catch(err => console.error("earnings fetch failed", err));
+
+    // 3️⃣ fetch last 3 collaborations (campaigns endpoint returns collaborations array)
+    fetch(`/api/influencer2/${username}/campaigns`)
+      .then(res => res.json())
+      .then((json) => {
+        const arr = Array.isArray(json?.campaigns) ? json.campaigns : json?.campaigns ?? [];
+        // take last 3 if available
+        const last3 = arr.slice(-3).reverse();
+        setCollaborations(last3);
+      })
+      .catch(err => console.error("collabs fetch failed", err));
+
+    // 4️⃣ fetch followers history (last 5 months)
+    fetch(`/api/influencer2/${username}/followers`)
+      .then(res => res.json())
+      .then(fjson => {
+        const months = Array.isArray(fjson.months) ? fjson.months : [];
+        const totals = Array.isArray(fjson.totals) ? fjson.totals.map((n: any) => Number(n) || 0) : [];
+        setFollowersMonths(months);
+        setFollowersTotals(totals);
+      })
+      .catch(err => console.error("followers fetch failed", err));
+  }, [initialData]);
+
+  if (loading) {
+    return <div className="text-center py-8">Loading profile...</div>;
+  }
+
+  if (!data) {
+    return <div className="text-center py-8">No profile data available</div>;
+  }
+
+  // collaborations state is fetched from the API; default empty while loading
+
+  // Chart data and options (memoized so Chart updates reliably)
+  const earningsData = React.useMemo(() => ({
+    labels: earningsMonths,
     datasets: [
       {
         label: "Earnings (₹)",
-        data: totalEarnings,
-        backgroundColor: "rgba(34,211,238,0.7)",
+        data: earningsTotals,
+        backgroundColor: "rgba(34,211,238,0.9)",
         borderColor: "#0891b2",
-        borderWidth: 2,
-        borderRadius: 12,
+        borderWidth: 1,
+        borderRadius: 8,
+        barThickness: 18,
         barPercentage: 0.7,
         categoryPercentage: 0.7,
       },
     ],
-  };
-  const earningsOptions = {
-    responsive: true,
-    plugins: {
-      legend: { display: false },
-      title: { display: false },
-      tooltip: { enabled: true },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: "#fff" },
-      },
-      y: {
-        grid: { color: "#334155" },
-        ticks: { color: "#fff" },
-        beginAtZero: true,
-      },
-    },
-    elements: {
-      bar: {
-        borderRadius: 12,
-      },
-    },
-  };
-  const followersData = {
-    labels: months,
+  }), [earningsMonths, earningsTotals]);
+
+  const followersData = React.useMemo(() => ({
+    labels: followersMonths,
     datasets: [
       {
         label: "Followers",
-        data: followersGrowth,
-        backgroundColor: "rgba(251,191,36,0.7)",
-        borderColor: "#fbbf24",
-        borderWidth: 2,
-        borderRadius: 12,
-        barPercentage: 0.7,
-        categoryPercentage: 0.7,
+        data: followersTotals,
+        backgroundColor: "rgba(99,102,241,0.9)",
+        borderColor: "#7c3aed",
+        borderWidth: 1,
+        borderRadius: 6,
+        barThickness: 16,
       },
     ],
-  };
-  const followersOptions = {
+  }), [followersMonths, followersTotals]);
+
+  const followersOptions = React.useMemo<ChartOptions<'bar'>>(() => ({
     responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: "#fff" } },
+      y: { beginAtZero: true, grid: { color: "#334155" }, ticks: { color: "#fff" } },
+    },
+  }), []);
+
+  const earningsOptions = React.useMemo<ChartOptions<'bar'>>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      title: { display: false },
       tooltip: { enabled: true },
     },
     scales: {
@@ -129,17 +157,26 @@ const Profile: React.FC<ProfileProps> = ({ data }) => {
         ticks: { color: "#fff" },
       },
       y: {
-        grid: { color: "#334155" },
-        ticks: { color: "#fff" },
         beginAtZero: true,
+
+        suggestedMax: Math.max(...earningsTotals, 1000),
+
+        grid: { color: "#334155" },
+        ticks: ({
+          color: "#fff",
+          callback: function (value: any) {
+            const n = Number(value);
+            if (isNaN(n)) return String(value);
+            if (n >= 1000) return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'k';
+            return String(n);
+          },
+        } as unknown) as any,
       },
     },
-    elements: {
-      bar: {
-        borderRadius: 12,
-      },
-    },
-  };
+  }), [earningsTotals]);
+
+
+
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-8">
@@ -147,14 +184,35 @@ const Profile: React.FC<ProfileProps> = ({ data }) => {
         {/* Profile Card */}
         <div className="flex-1 min-w-[320px] max-w-[400px] bg-cyan-500 rounded-2xl shadow-lg p-8 flex flex-col items-center justify-center h-[520px] mr-4">
           <div className="w-28 h-28 rounded-full mb-6 overflow-hidden border-4 border-white shadow">
-            {data.profilePic && <img src={data.profilePic} alt="Profile" className="w-full h-full object-cover" />}
+            {data.profilePicUrl && <img src={data.profilePicUrl} alt="Profile" className="w-full h-full object-cover" />}
           </div>
-          <div className="text-2xl font-bold mb-2">{data.name}</div>
-          <div className="text-base text-black mb-1">{data.followersCount} followers</div>
-          <div className="text-base text-black mb-1">niche - {data.niche}</div>
-          <div className="text-base text-black mb-1">{data.location}</div>
-          <div className="text-base text-black mb-1">Rating: {data.rating}</div>
-          <div className="text-sm text-black mt-4 text-center">{data.bio}</div>
+          <div className="text-2xl font-bold mb-2">@{data.username}</div>
+          <div className="text-base text-black mb-1">Category: {data.category}</div>
+          {data.niche && <div className="text-base text-black mb-1">Niche: {data.niche}</div>}
+          {data.location && <div className="text-base text-black mb-1">Location: {data.location}</div>}
+          <div className="mt-4 flex flex-wrap gap-2 justify-center">
+            {data.nicheTags.map((tag, index) => (
+              <span key={index} className="px-2 py-1 bg-white/20 rounded-full text-xs text-black">
+                {tag}
+              </span>
+            ))}
+          </div>
+          {data.bio && <div className="text-sm text-black mt-4 text-center">{data.bio}</div>}
+          {data.platformLinks && (
+            <div className="mt-4 flex gap-2">
+              {Object.entries(data.platformLinks).map(([platform, url]) => (
+                <a
+                  key={platform}
+                  href={url as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                >
+                  {platform}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 flex flex-col gap-6 min-w-[340px]">
@@ -162,16 +220,44 @@ const Profile: React.FC<ProfileProps> = ({ data }) => {
           <div className="bg-cyan-500 rounded-2xl shadow-lg p-6 min-h-[120px] flex flex-col justify-center">
             <div className="font-semibold mb-4 text-lg">past 3 collaborations</div>
             <div className="flex flex-row gap-4 justify-between">
+              {collaborations.length === 0 && (
+                <div className="text-sm text-gray-300">No collaborations yet</div>
+              )}
               {collaborations.map((c, i) => (
-                <div key={i} className="bg-white/80 rounded-xl flex flex-col items-center p-3 w-32 shadow-md">
+                <div
+                  key={c.id}
+                  className="bg-white/80 rounded-xl flex flex-col items-center p-3 w-32 shadow-md"
+                >
+                  {/* Thumbnail */}
                   <div className="w-14 h-14 rounded-full overflow-hidden mb-2 border-2 border-cyan-400">
-                    <img src={c.thumbnail} alt={c.brand + ' thumbnail'} className="w-full h-full object-cover" />
+                    {c.brand?.logoUrl || c.package?.thumbnailUrl ? (
+                      <img
+                        src={c.brand?.logoUrl || c.package?.thumbnailUrl}
+                        alt="brand"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200" />
+                    )}
                   </div>
-                  <div className="font-bold text-cyan-700 text-sm mb-1 text-center">{c.brand}</div>
-                  <div className="text-xs text-gray-800 mb-1 text-center">{c.campaign}</div>
-                  <div className="text-xs text-gray-500 text-center">{c.date}</div>
+
+                  {/* Brand name */}
+                  <div className="font-bold text-cyan-700 text-sm mb-1 text-center">
+                    @{c.brand?.username}
+                  </div>
+
+                  {/* Campaign / Package */}
+                  <div className="text-xs text-gray-800 mb-1 text-center">
+                    {c.campaign?.name || c.package?.title}
+                  </div>
+
+                  {/* Date */}
+                  <div className="text-xs text-gray-500 text-center">
+                    {new Date(c.createdAt).toLocaleDateString()}
+                  </div>
                 </div>
               ))}
+
             </div>
           </div>
 
@@ -180,9 +266,15 @@ const Profile: React.FC<ProfileProps> = ({ data }) => {
             {/* Total Earnings (last 5 months) - Bar Graph */}
             <div className="bg-gray-900 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center w-72 h-72">
               <div className="font-semibold mb-2 text-lg text-gray-200">total earnings<br />last 5 months</div>
-              <div className="w-full h-48 flex items-center justify-center">
-                <Bar data={earningsData} options={earningsOptions} />
+              <div className="w-full h-48">
+                <Bar
+                  key={`${earningsMonths.join("-")}-${earningsTotals.join("-")}`}
+                  data={earningsData}
+                  options={earningsOptions}
+                />
               </div>
+
+
             </div>
 
             {/* Followers Growth (last 5 months) - Bar Graph */}

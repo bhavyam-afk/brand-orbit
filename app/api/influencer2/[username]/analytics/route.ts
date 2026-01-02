@@ -3,10 +3,15 @@ import prisma from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { username: string } }
+  { params }: { params: { username: string | string[] | Promise<string> | Promise<string[]> } }
 ) {
   try {
-    const { username } = params;
+    const resolvedParams: any = await params;
+    let usernameRaw: unknown = resolvedParams?.username;
+    if (usernameRaw instanceof Promise) {
+      usernameRaw = await usernameRaw;
+    }
+    const username = Array.isArray(usernameRaw) ? usernameRaw[0] : String(usernameRaw ?? '');
     if (!username || typeof username !== "string") {
       return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
@@ -32,3 +37,5 @@ export async function GET(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { signIn, signOut } from "next-auth/react";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { useRouter } from 'next/navigation';
 
@@ -17,6 +18,11 @@ const SignupCard = ({ userType }: SignupCardProps) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    // Ensure any existing session is cleared when opening signup page
+    signOut({ redirect: false });
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -25,8 +31,8 @@ const SignupCard = ({ userType }: SignupCardProps) => {
       return;
     }
     try {
-      const res = await fetch("/api/auth/signup", { 
-        method: "POST", 
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, type: userType }),
       });
@@ -35,9 +41,20 @@ const SignupCard = ({ userType }: SignupCardProps) => {
         setError(data.error || "Signup failed");
         return;
       }
-  router.push(`/${userType}/${name}/dashboard`);
+
+      // After creating the user, sign them in with credentials to set a fresh session cookie
+      const signRes = await signIn('credentials', { redirect: false, email, password });
+      if ((signRes as any)?.error) {
+        // If signIn failed, still redirect to signup success page or show error
+        setError('Signed up but automatic sign-in failed');
+        return;
+      }
+
+      router.push(`/${userType}/${name}/dashboard`);
+      
+
     } catch (err: any) {
-      setError("Signup failed");
+      setError("Signup failed"); 
     }
   }
 
@@ -46,7 +63,7 @@ const SignupCard = ({ userType }: SignupCardProps) => {
       <h2 className="text-3xl font-bold mb-2 text-center">Sign Up {userType === "brand" ? "as Brand" : "as Influencer"}</h2>
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
 
-        <input type="text" placeholder="Full Name" className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
+        <input type="text" placeholder="Username" className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
           value={name} onChange={e => setName(e.target.value)} required />
         <input type="email" placeholder="Email" className="px-4 py-3 rounded bg-gray-800 text-white focus:outline-none"
           value={email} onChange={e => setEmail(e.target.value)} required />

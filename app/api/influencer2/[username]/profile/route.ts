@@ -3,19 +3,28 @@ import prisma from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { username: string } }
+  { params }: { params: { username: string | string[] | Promise<string> | Promise<string[]> } }
 ) {
   try {
-
-    const { username } = params;
+    // Next.js may provide `params` as a Promise-like object — await it first
+    // to satisfy the App Router requirement: "params should be awaited before using its properties".
+    const resolvedParams: any = await params;
+    // Normalize & await username (handle Promise and array cases)
+    let usernameRaw: unknown = resolvedParams?.username;
+    if (usernameRaw instanceof Promise) {
+      try {
+        usernameRaw = await usernameRaw;
+      } catch (e) {
+        console.error('[API] Error awaiting username param', e);
+        return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
+      }
+    }
+    const username = Array.isArray(usernameRaw) ? usernameRaw[0] : String(usernameRaw ?? '');
 
     // Validate username
     if (!username || typeof username !== 'string') {
-      console.log("[API] Invalid username parameter");
-      return NextResponse.json(
-        { error: "Invalid username" },
-        { status: 400 }
-      );
+      console.log('[API] Invalid username parameter');
+      return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
     }
 
     console.log("[API] Fetching influencer profile for username:", username);
@@ -54,6 +63,12 @@ export async function GET(
       }
     }
 
+    // Normalize nicheTags to always be an array for safe mapping on the frontend
+    let nicheTags = profile.nicheTags;
+    if (!Array.isArray(nicheTags)) {
+      nicheTags = nicheTags ? [String(nicheTags)] : [];
+    }
+
     // Prepare response
     const response = {
       id: profile.id,
@@ -62,6 +77,7 @@ export async function GET(
       name: profile.username, // Use username as name (no name field in schema)
       bio: profile.bio,
       niche: profile.niche,
+      nicheTags: nicheTags,
       // followersCount: profile.followersCount,
       platformLinks: platformLinks || {},
       profilePic: profile.profilePicUrl,
