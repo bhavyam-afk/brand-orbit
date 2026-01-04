@@ -99,6 +99,8 @@ const LoginCard = ({ userType }: LoginCardProps) => {
       <div className="text-sm text-gray-400 text-center">
         Forgot your password?
       </div>
+      <div className="flex justify-center mt-4">
+      </div>
     </div>
   );
 };

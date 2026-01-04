@@ -12,7 +12,6 @@ import {
   Legend,
   type ChartOptions,
 } from "chart.js";
-
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface ProfileData {
@@ -102,7 +101,7 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
   // collaborations state is fetched from the API; default empty while loading
 
   // Chart data and options (memoized so Chart updates reliably)
-  const earningsData = React.useMemo(() => ({
+  const earningsData = {
     labels: earningsMonths,
     datasets: [
       {
@@ -117,9 +116,9 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
         categoryPercentage: 0.7,
       },
     ],
-  }), [earningsMonths, earningsTotals]);
+  };
 
-  const followersData = React.useMemo(() => ({
+  const followersData = {
     labels: followersMonths,
     datasets: [
       {
@@ -132,9 +131,9 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
         barThickness: 16,
       },
     ],
-  }), [followersMonths, followersTotals]);
+  }
 
-  const followersOptions = React.useMemo<ChartOptions<'bar'>>(() => ({
+  const followersOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
@@ -142,9 +141,9 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
       x: { grid: { display: false }, ticks: { color: "#fff" } },
       y: { beginAtZero: true, grid: { color: "#334155" }, ticks: { color: "#fff" } },
     },
-  }), []);
+  };
 
-  const earningsOptions = React.useMemo<ChartOptions<'bar'>>(() => ({
+  const earningsOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -173,10 +172,7 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
         } as unknown) as any,
       },
     },
-  }), [earningsTotals]);
-
-
-
+  };
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-8">
@@ -200,17 +196,34 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
           {data.bio && <div className="text-sm text-black mt-4 text-center">{data.bio}</div>}
           {data.platformLinks && (
             <div className="mt-4 flex gap-2">
-              {Object.entries(data.platformLinks).map(([platform, url]) => (
-                <a
-                  key={platform}
-                  href={url as string}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
-                >
-                  {platform}
-                </a>
-              ))}
+              {Array.isArray(data.platformLinks)
+                ? data.platformLinks.map((entry: any, i: number) => {
+                    const name = entry.platform || entry.name || `link${i + 1}`;
+                    const url = entry.url || entry.href || "";
+                    const label = typeof name === "string" ? name.charAt(0).toUpperCase() + name.slice(1) : String(name);
+                    return (
+                      <a
+                        key={`${name}-${i}`}
+                        href={String(url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                      >
+                        {label}
+                      </a>
+                    );
+                  })
+                : Object.entries(data.platformLinks).map(([platformName, url]) => (
+                    <a
+                      key={platformName}
+                      href={String(url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                    >
+                      {platformName}
+                    </a>
+                  ))}
             </div>
           )}
         </div>
@@ -263,6 +276,7 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
 
           {/* Bar Graphs Row */}
           <div className="flex flex-row gap-6">
+
             {/* Total Earnings (last 5 months) - Bar Graph */}
             <div className="bg-gray-900 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center w-72 h-72">
               <div className="font-semibold mb-2 text-lg text-gray-200">total earnings<br />last 5 months</div>
@@ -273,8 +287,6 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
                   options={earningsOptions}
                 />
               </div>
-
-
             </div>
 
             {/* Followers Growth (last 5 months) - Bar Graph */}
@@ -285,6 +297,7 @@ const Profile: React.FC<ProfileProps> = ({ initialData }) => {
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

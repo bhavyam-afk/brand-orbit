@@ -15,31 +15,40 @@ export async function GET(
       where: { username },
       select: {
         collaborations: {
-          where: {
-            status: "COMPLETED",
-          },
-          take: 3,
+          // return all collaborations regardless of status
           select: {
             id: true,
+            status: true,
             finalCost: true,
 
+            // Brand who requested/paid
             brand: {
               select: {
+                id: true,
                 username: true,
                 logoUrl: true,
               },
             },
 
+            // Associated campaign (if any)
             campaign: {
               select: {
+                id: true,
                 name: true,
+                budget: true,
+                startDate: true,
+                endDate: true,
               },
             },
 
+            // Package details
             package: {
               select: {
+                id: true,
                 title: true,
                 thumbnailUrl: true,
+                deliveryTimeDays: true,
+                price: true,
               },
             },
           },

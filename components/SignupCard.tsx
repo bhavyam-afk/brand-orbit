@@ -75,6 +75,8 @@ const SignupCard = ({ userType }: SignupCardProps) => {
         <LiquidButton type="submit" className="mt-4 w-full">Sign Up</LiquidButton>
         {error && <div className="text-red-400 text-sm text-center mt-2">{error}</div>}
       </form>
+      <div className="flex justify-center mt-4">
+      </div>
     </div>
   );
 };
