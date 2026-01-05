@@ -14,7 +14,7 @@ import MetaConnectButton from "@/components/MetaConnectButton";
 const sidebarOptions = [
   "Profile",
   "List Packages",
-  "Feed",
+  // "Feed",
   "Analytics",
   "Campaigns",
   "Wallet",
@@ -79,13 +79,13 @@ const InfluencerDashboard = () => {
             // API returns the settings object directly
             setSettings(data || null);
             break;
-            case "Feed":
-              res = await fetch(`/api/influencer2/${username}/feed`);
-              if (!res.ok) throw new Error("Failed to fetch feed");
-              data = await res.json();
-              // API returns an object { brands: [...] }
-              setFeed(data?.brands || []);
-              break;
+            // case "Feed":
+            //   res = await fetch(`/api/influencer2/${username}/feed`);
+            //   if (!res.ok) throw new Error("Failed to fetch feed");
+            //   data = await res.json();
+            //   // API returns an object { brands: [...] }
+            //   setFeed(data?.brands || []);
+            //   break;
           default:
           break;
         }
@@ -171,12 +171,12 @@ const InfluencerDashboard = () => {
                           <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M15.66 15.66l1.41 1.41M4.93 15.07l1.41-1.41M15.66 4.34l1.41-1.41" />
                         </svg>
                       )}
-                      {option === "Feed" && (
+                      {/* {option === "Feed" && (
                         <svg width="20" height="20" fill="currentColor">
                           <circle cx="10" cy="7" r="4" />
                           <rect x="4" y="13" width="12" height="5" rx="2" />
                         </svg>
-                      )}
+                      )} */}
                     </span>
                     {option}
                   </span>

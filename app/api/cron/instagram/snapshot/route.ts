@@ -32,14 +32,14 @@ export async function POST(req: Request) {
             const profile = await profileRes.json();
 
             // 3️⃣ Fetch insights (✅ VALID METRICS ONLY)
-            const dailyMetrics = [
+            const DAILY_METRICS = [
                 "reach",
-                "impressions",
+                "follower_count",
             ].join(",");
 
             const dailyRes = await fetch(
                 `https://graph.facebook.com/v19.0/${igId}/insights` +
-                `?metric=${dailyMetrics}` +
+                `?metric=${DAILY_METRICS}` +
                 `&period=day` +
                 `&access_token=${token}`
             );
@@ -53,6 +53,12 @@ export async function POST(req: Request) {
             const totalMetrics = [
                 "accounts_engaged",
                 "profile_views",
+                "total_interactions",
+                "likes",
+                "comments",
+                "shares",
+                "saves",
+                "replies",
             ].join(",");
 
             const totalRes = await fetch(
@@ -71,6 +77,29 @@ export async function POST(req: Request) {
                 );
             }
 
+            // const DEMOGRAPHIC_METRICS = [
+            //     "engaged_audience_demographics",
+            // ].join(",");
+
+            // const demographicRes = await fetch(
+            //     `https://graph.facebook.com/v19.0/${igId}/insights` +
+            //     `?metric=${DEMOGRAPHIC_METRICS}` +
+            //     `&period=lifetime` +
+            //     `&metric_type=total_value` +
+            //     `&breakdown=age,gender,city,country` +
+            //     `&timeframe=this_month` +
+            //     `&access_token=${token}`
+            // );
+
+            // const demographicInsights = await demographicRes.json();
+
+            // if (demographicInsights?.error) {
+            //     throw new Error(
+            //         `Demographic Insights API error: ${demographicInsights.error.message}`
+            //     );
+            // }
+
+
             // 4️⃣ Store raw snapshot
             await prisma.creatorSocialRawSnapshot.create({
                 data: {
@@ -81,6 +110,7 @@ export async function POST(req: Request) {
                         insights: {
                             daily: dailyInsights,
                             total: totalInsights,
+                            // demographic: demographicInsights,
                         },
                     },
                 },

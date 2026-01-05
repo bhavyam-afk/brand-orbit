@@ -4,7 +4,7 @@ import React from "react";
 
 const campaignTabs = [
   { key: "ACTIVE", label: "Active Campaigns", icon: "🔷" },
-  { key: "PENDING", label: "Pending Offers", icon: "🟧" },
+  { key: "PENDING", label: "Requests", icon: "🟧" },
   { key: "COMPLETED", label: "Completed Campaigns", icon: "🏁" },
 ] as const;
 
@@ -32,6 +32,7 @@ const Campaigns: React.FC<CampaignsProps> = ({ initialCampaigns }) => {
   const [selectedCampaign, setSelectedCampaign] = React.useState<Campaign | null>(null);
   const [campaigns, setCampaigns] = React.useState<Campaign[]>(initialCampaigns || []);
   const [loading, setLoading] = React.useState(!initialCampaigns);
+  const [acceptingIds, setAcceptingIds] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     const username = window.location.pathname.split("/")[2];
@@ -152,13 +153,43 @@ const Campaigns: React.FC<CampaignsProps> = ({ initialCampaigns }) => {
                 Engagement: <span className="text-white">{campaign.engagement}%</span>
               </div>
             )}
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => setSelectedCampaign(campaign)}
+                className="px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold hover:bg-[#5a3ca0]"
+              >
+                View Details
+              </button>
 
-            <button
-              onClick={() => setSelectedCampaign(campaign)}
-              className="mt-2 px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold hover:bg-[#5a3ca0]"
-            >
-              View Details
-            </button>
+              {campaign.status === 'PENDING' && (
+                <button
+                  onClick={async () => {
+                    const username = window.location.pathname.split('/')[2];
+                    if (!username) return;
+                    setAcceptingIds(prev => [...prev, campaign.id]);
+                    try {
+                      const res = await fetch(`/api/influencer2/${encodeURIComponent(username)}/collaborations/${campaign.id}/accept`, { method: 'POST' });
+                      if (!res.ok) {
+                        const d = await res.json().catch(() => ({}));
+                        throw new Error(d?.error || res.statusText || 'Accept failed');
+                      }
+                      const data = await res.json().catch(() => ({}));
+                      const updated = data?.collaboration ?? data;
+                      setCampaigns(prev => prev.map(p => p.id === campaign.id ? { ...p, status: updated?.status ?? 'ACTIVE' } : p));
+                      setCampaignTab('ACTIVE');
+                    } catch (err) {
+                      console.error('Accept error', err);
+                    } finally {
+                      setAcceptingIds(prev => prev.filter(id => id !== campaign.id));
+                    }
+                  }}
+                  disabled={acceptingIds.includes(campaign.id)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-500"
+                >
+                  {acceptingIds.includes(campaign.id) ? 'Accepting…' : 'Accept'}
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

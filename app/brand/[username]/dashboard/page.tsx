@@ -1,9 +1,16 @@
 "use client";
 import React, { useState } from "react";
+import Profile from "@/br-dash-components/Profile"; 
+import BrandFeed from "@/br-dash-components/BrandFeed";
+import Settings from "@/br-dash-components/Settings";
+import Analytics from "@/br-dash-components/Analytics";
+import Wallet from "@/br-dash-components/Wallet";
+import Deals from "@/br-dash-components/Deals";
 
 const sidebarOptions = [
   { key: "profile", label: "Profile" },
   { key: "feed", label: "Feed" },
+  { key: "Deals", label: "Deals" },
   { key: "analytics", label: "Analytics" },
   { key: "wallet", label: "Wallet" },
   { key: "settings", label: "Settings" },
@@ -29,11 +36,12 @@ const BrandDashboard = () => {
       </aside>
       {/* Main content */}
       <main className="flex-1 p-10">
-        {selected === "profile" && <div>Brand Profile Section (to be implemented)</div>}
-        {selected === "feed" && <div>Brand Feed Section (to be implemented)</div>}
-        {selected === "analytics" && <div>Brand Analytics Section (to be implemented)</div>}
-        {selected === "wallet" && <div>Brand Wallet Section (to be implemented)</div>}
-        {selected === "settings" && <div>Brand Settings Section (to be implemented)</div>}
+        {selected === "profile" && <Profile />}
+        {selected === "feed" && <div><BrandFeed /></div>}
+        {selected === "Deals" && <div><Deals /></div>}
+        {selected === "analytics" && <div><Analytics /></div>}
+        {selected === "wallet" && <div><Wallet /></div>}
+        {selected === "settings" && <div><Settings /></div>}
       </main>
     </div>
   );

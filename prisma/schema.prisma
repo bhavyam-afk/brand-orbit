@@ -25,7 +25,7 @@ enum PackageStatus {
 }
 
 enum CollabStatus {
-  PENDING // Brand has requested, creator hasn't accepted
+  PENDING // Brand has requested, creator hasn't accepted yet 
   ACTIVE // In progress
   COMPLETED // Finished, awaiting payment/review
   CANCELLED
