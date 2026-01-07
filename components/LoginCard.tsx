@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn, getSession } from "next-auth/react";
 
 interface LoginCardProps {
-  userType: "brand" | "influencer";
+  userType: "brand" | "creator";
 }
 
 const LoginCard = ({ userType }: LoginCardProps) => {
@@ -48,14 +48,14 @@ const LoginCard = ({ userType }: LoginCardProps) => {
     // 3️⃣ Validate role vs login page
     if (
       (userType === "brand" && role !== "BRAND") ||
-      (userType === "influencer" && role !== "CREATOR")
+      (userType === "creator" && role !== "CREATOR")
     ) {
       setError("You are logging in from the wrong portal");
       return;
     }
 
     // 4️⃣ Redirect dynamically
-    const basePath = role === "BRAND" ? "brand" : "influencer";
+    const basePath = (role === "BRAND") ? "brand" : "creator";
 
     router.push(`/${basePath}/${username}/dashboard`);
   }
@@ -63,7 +63,7 @@ const LoginCard = ({ userType }: LoginCardProps) => {
   return (
     <div className="bg-[#222] rounded-2xl shadow-2xl p-10 w-[400px] max-w-full text-white flex flex-col gap-6">
       <h2 className="text-3xl font-bold mb-2 text-center">
-        Login {userType === "brand" ? "as Brand" : "as Influencer"}
+        Login {userType === "brand" ? "as Brand" : "as Creator"}
       </h2>
 
       <form className="flex flex-col gap-4" onSubmit={handleLogin}>
@@ -85,7 +85,7 @@ const LoginCard = ({ userType }: LoginCardProps) => {
           required
         />
 
-        <LiquidButton type="submit" className="mt-4 w-full">
+        <LiquidButton type="submit" className="mt-4 w-full invert">
           Login
         </LiquidButton>
 
@@ -99,8 +99,7 @@ const LoginCard = ({ userType }: LoginCardProps) => {
       <div className="text-sm text-gray-400 text-center">
         Forgot your password?
       </div>
-      <div className="flex justify-center mt-4">
-      </div>
+
     </div>
   );
 };

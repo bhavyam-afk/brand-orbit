@@ -10,7 +10,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials, req) {
@@ -80,7 +80,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt" as const
   },
   pages: {
-    signIn: "/" // Change as needed
+    signIn: "/"
   }
 };
 

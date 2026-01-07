@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+ @custom-variant dark (&:is(.dark *));
 
 .handlee-regular {
   font-family: "Sans-Francicso", cursive;
@@ -137,5 +137,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-

@@ -11,10 +11,10 @@ interface NavbuttonsProps {
 
 const Navbuttons = ({ type }: NavbuttonsProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [cardType, setCardType] = useState<null | "brand" | "influencer">(null);
+  const [cardType, setCardType] = useState<null | "brand" | "creator">(null);
   const isLogin = type === "login";
 
-  function handleDropdown(choice: "brand" | "influencer") {
+  function handleDropdown(choice: "brand" | "creator") {
     setCardType(choice);
     setDropdownOpen(false);
   }
@@ -28,7 +28,7 @@ const Navbuttons = ({ type }: NavbuttonsProps) => {
       <div className="relative">
         <LiquidButton
           className={isLogin ? "rounded-2xl font-semibold w-24" : "rounded-2xl font-semibold w-24 "}
-          onClick={() => setDropdownOpen((open) => !open)}
+          onClick={() => {setDropdownOpen((open) => !open)}}
         >
           {isLogin ? "Login" : "Signup"}
         </LiquidButton>
@@ -42,22 +42,22 @@ const Navbuttons = ({ type }: NavbuttonsProps) => {
             </button>
             <button
               className="block w-full px-6 py-3 text-left text-white hover:bg-purple-700 rounded-b-lg"
-              onClick={() => handleDropdown("influencer")}
+              onClick={() => handleDropdown("creator")}
             >
-              {isLogin ? "As Influencer" : "As Influencer"}
+              {isLogin ? "As Creator" : "As Creator"}
             </button>
           </div>
         )}
       </div>
       {cardType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)'}}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="relative">
             <button
               className="absolute top-4 right-4 text-white text-2xl font-bold bg-gray-700 rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-900"
               onClick={handleClose}
               aria-label="Close"
             >
-              ×
+              X
             </button>
             {isLogin ? <LoginCard userType={cardType} /> : <SignupCard userType={cardType} />}
           </div>

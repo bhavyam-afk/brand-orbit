@@ -29,7 +29,7 @@ import React from 'react'
 
 const Features = () => {
   return (
-    <div className="flex flex-wrap justify-center items-start gap-x-24 gap-y-16 mt-16">
+    <div className="flex flex-wrap justify-center items-start gap-x-24 gap-y-16 mt-16 ">
       {features.map((feature, idx) => (
         <div key={idx} className={ idx % 2 === 0 ? "mb-24" : "mt-24" } style={{ width: "340px", minWidth: "280px" }}>
           <Card title={feature.title} description={feature.description} />
@@ -40,3 +40,6 @@ const Features = () => {
 }
 
 export default Features
+
+
+// bg-gradient-to-br from-[#232946] via-[#1a1f3c] to-[#0a0f2c]

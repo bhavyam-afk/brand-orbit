@@ -6,29 +6,23 @@ export async function GET(
   { params }: { params: { username: string | string[] | Promise<string> | Promise<string[]> } }
 ) {
   try {
-    // Next.js may provide `params` as a Promise-like object — await it first
-    // to satisfy the App Router requirement: "params should be awaited before using its properties".
     const resolvedParams: any = await params;
     // Normalize & await username (handle Promise and array cases)
-    let usernameRaw: unknown = resolvedParams?.username;
+    let usernameRaw: any = resolvedParams?.username;
     if (usernameRaw instanceof Promise) {
       try {
         usernameRaw = await usernameRaw;
       } catch (e) {
-        console.error('[API] Error awaiting username param', e);
         return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
       }
     }
-    const username = Array.isArray(usernameRaw) ? usernameRaw[0] : String(usernameRaw ?? '');
+
+    const username = Array.isArray(usernameRaw) ? usernameRaw[0] : String(usernameRaw);
 
     // Validate username
     if (!username || typeof username !== 'string') {
-      console.log('[API] Invalid username parameter');
-      return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
+      return NextResponse.json({ error: 'Username is not a string' }, { status: 400 });
     }
-
-    console.log("[API] Fetching influencer profile for username:", username);
-    console.log("[API] Before Prisma query");
     
     // Fetch profile from database
     const profile = await prisma.creatorProfile.findUnique({
@@ -40,64 +34,55 @@ export async function GET(
       },
     });
 
-    console.log("[API] After Prisma query");
-    console.log("[API] Query result:", profile ? "Found" : "Not found");
-
     // Handle not found
     if (!profile) {
-      console.log("[API] Influencer not found for username:", username);
       return NextResponse.json(
-        { error: "Influencer not found" },
+        { error: "No Creatr found" },
         { status: 404 }
       );
     }
 
+    // DURING STORAGE TAKE CARE OF THESE STEPS NOW.  
     // Parse platformLinks if stored as string (Prisma Json field should handle this automatically)
-    let platformLinks = profile.platformLinks;
-    if (typeof platformLinks === 'string') {
-      try {
-        platformLinks = JSON.parse(platformLinks);
-      } catch (error) {
-        console.error("[API] Failed to parse platformLinks:", error);
-        platformLinks = {};
-      }
-    }
+    // let platformLinks = profile.platformLinks;
+    // if (typeof platformLinks === 'string') {
+    //   try {
+    //     platformLinks = JSON.parse(platformLinks);
+    //   } catch (error) {
+    //     platformLinks = {};
+    //   }
+    // }
 
     // Normalize nicheTags to always be an array for safe mapping on the frontend
-    let nicheTags = profile.nicheTags;
-    if (!Array.isArray(nicheTags)) {
-      nicheTags = nicheTags ? [String(nicheTags)] : [];
-    }
+    // let nicheTags = profile.nicheTags;
+    // if (!Array.isArray(nicheTags)) {
+    //   nicheTags = nicheTags ? [String(nicheTags)] : [];
+    // }
 
     // Prepare response
     const response = {
       id: profile.id,
       userId: profile.userId,
       username: profile.username,
-      name: profile.username, // Use username as name (no name field in schema)
       bio: profile.bio,
       niche: profile.niche,
-      nicheTags: nicheTags,
-      // followersCount: profile.followersCount,
-      platformLinks: platformLinks || {},
+      nicheTags: profile.nicheTags,
+      platformLinks: profile.platformLinks || {},
       profilePic: profile.profilePicUrl,
-      avatarUrl: profile.profilePicUrl, // Alias for compatibility
       location: profile.location,
       rating: profile.mlScore,
+      category: profile.category,
+      platforms: profile.platformLinks || {},
+      // followersCount: profile.follower_count || 0,
+
       packages: profile.packages || [],
-      offers: profile.collaborations || [],
-      payments: profile.transaction || [],
-      // Additional aliases if needed
-      categories: profile.niche,
-      platforms: platformLinks || {},
+      transactions: profile.transaction || [],
+      collaborations: profile.collaborations || [],
     };
 
-    console.log("[API] Successfully returning profile for:", username);
     return NextResponse.json(response, { status: 200 });
 
   } catch (error) {
-    console.error("[API] Error fetching influencer profile:", error);
-    // Handle specific Prisma errors
     if (error instanceof Error) {
       // Prisma connection errors
       if (error.message.includes('connect')) {

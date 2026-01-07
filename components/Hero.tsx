@@ -6,7 +6,7 @@ import React from 'react'
 const Hero = () => {
     return (
     <>
-    <div className="relative w-full min-h-[600px] flex flex-col items-center justify-centfer bg-gradient-to-br from-[#0a0f2c] via-[#1a1f3c] to-[#232946] shadow-2xl mt-20">
+    <div className="relative w-full min-h-[600px] flex flex-col items-center justify-centfer shadow-2xl mt-20">
         <div className="relative z-10 flex flex-row w-full max-w-7xl mx-auto py-20 px-8 gap-16">
             {/* left main description  */}
             <div className="flex flex-col items-center justify-center w-1/2 pr-12">
@@ -60,3 +60,6 @@ const Hero = () => {
 }
 
 export default Hero
+
+
+//  bg-gradient-to-br from-[#0a0f2c] via-[#1a1f3c] to-[#232946]

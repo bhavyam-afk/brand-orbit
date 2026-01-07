@@ -6,7 +6,13 @@ export async function POST(request: Request, { params }: { params: { username: s
     const { username, id } = params;
 
     // find creator by username
-    const creator = await prisma.creatorProfile.findUnique({ where: { username } });
+    const creator = await prisma.creatorProfile.findUnique({
+      where: { username },
+      include: {
+        collaborations: true,
+      }
+    });
+
     if (!creator) return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
 
     // find collaboration and ensure it belongs to this creator

@@ -1,181 +1,155 @@
-import { PrismaClient, CollabStatus, TransactionType, TransactionStatus } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
+import { Prisma, PrismaClient, UserType, CreatorCategory, CollabStatus, TransactionType, TransactionStatus } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const monthsAgo = (n: number) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  return d;
+};
+
 async function main() {
-  console.log("🌱 Seeding for existing creator: creator1");
+  console.log("🌱 Seeding database...");
 
   // ─────────────────────────────────────────────
-  // 1️⃣ Fetch existing creator
+  // USERS
   // ─────────────────────────────────────────────
-  const creatorUser = await prisma.user.findUnique({
-    where: { username: "creator1" },
-    include: { creatorProfile: true },
-  });
+  const password = await bcrypt.hash("password123", 10);
 
-  if (!creatorUser || !creatorUser.creatorProfile) {
-    throw new Error("❌ creator1 or CreatorProfile does not exist");
+  const creators = await Promise.all(
+    ["alice", "bob", "charlie"].map((username, i) =>
+      prisma.user.create({
+        data: {
+          email: `${username}@mail.com`,
+          username,
+          passwordHash: password,
+          userType: UserType.CREATOR,
+          creatorProfile: {
+            create: {
+              username,
+              bio: `${username} is a lifestyle creator`,
+              niche: "Lifestyle",
+              nicheTags: ["fashion", "travel"],
+              category: [CreatorCategory.NANO, CreatorCategory.MICRO, CreatorCategory.MACRO][i],
+              follower_count: 2000 * (i + 1),
+            },
+          },
+          wallet: { create: {} },
+        },
+        include: { creatorProfile: true, wallet: true },
+      })
+    )
+  );
+
+  const brands = await Promise.all(
+    ["nike", "adidas"].map((username) =>
+      prisma.user.create({
+        data: {
+          email: `${username}@brand.com`,
+          username,
+          passwordHash: password,
+          userType: UserType.BRAND,
+          brandProfile: {
+            create: {
+              username,
+              bio: `${username} official brand`,
+              industryTags: ["fashion", "sports"],
+            },
+          },
+          wallet: { create: {} },
+        },
+        include: { brandProfile: true, wallet: true },
+      })
+    )
+  );
+
+  // ─────────────────────────────────────────────
+  // COLLABORATIONS + TRANSACTIONS
+  // ─────────────────────────────────────────────
+  for (let month = 5; month >= 0; month--) {
+    for (const creator of creators) {
+      const brand = brands[month % brands.length];
+
+      const collab = await prisma.collaboration.create({
+        data: {
+          creatorId: creator.creatorProfile!.id,
+          brandId: brand.brandProfile!.id,
+          brandName: brand.username,
+          packageId: "dummy", // placeholder
+          finalCost: 500 + month * 100,
+          status: CollabStatus.COMPLETED,
+          createdAt: monthsAgo(month),
+        },
+      });
+
+      // Brand pays
+      await prisma.transaction.create({
+        data: {
+          userId: brand.id,
+          creatorId: creator.creatorProfile!.id,
+          walletId: brand.wallet!.id,
+          amount: collab.finalCost,
+          type: TransactionType.PAYMENT,
+          status: TransactionStatus.COMPLETED,
+          collabId: collab.id,
+          createdAt: monthsAgo(month),
+        },
+      });
+
+      // Creator receives
+      await prisma.transaction.create({
+        data: {
+          userId: creator.id,
+          creatorId: creator.creatorProfile!.id,
+          walletId: creator.wallet!.id,
+          amount: new Prisma.Decimal(collab.finalCost).mul(0.9),
+          type: TransactionType.PAYOUT,
+          status: TransactionStatus.COMPLETED,
+          collabId: collab.id,
+          createdAt: monthsAgo(month),
+        },
+      });
+    }
   }
 
-  const creator = creatorUser.creatorProfile;
+  // ─────────────────────────────────────────────
+  // FOLLOWER SNAPSHOTS (GROWTH)
+  // ─────────────────────────────────────────────
+  for (const creator of creators) {
+    let followers = creator.creatorProfile!.follower_count;
 
-  // ─────────────────────────────────────────────
-  // 2️⃣ Wallet (safe)
-  // ─────────────────────────────────────────────
-  const wallet = await prisma.wallet.upsert({
-    where: { userId: creatorUser.id },
-    update: {},
-    create: {
-      userId: creatorUser.id,
-      currentBalance: new Decimal(5000),
-      pendingBalance: new Decimal(2000),
-      totalEarned: new Decimal(9000),
-      totalWithdrawn: new Decimal(4000),
-    },
-  });
+    for (let month = 5; month >= 0; month--) {
+      const increase = 50 + Math.floor(Math.random() * 100);
+      followers += increase;
 
-  // ─────────────────────────────────────────────
-  // 3️⃣ Brand User (safe)
-  // ─────────────────────────────────────────────
-  const brandUser = await prisma.user.upsert({
-    where: { username: "brand_seed" },
-    update: {},
-    create: {
-      email: "brand_seed@test.com",
-      username: "brand_seed",
-      passwordHash: "hashed",
-      userType: "BRAND",
-    },
-  });
+      await prisma.creatorFollowerSnapshot.create({
+        data: {
+          creatorId: creator.creatorProfile!.id,
+          followers_increased: increase,
+          recordedAt: monthsAgo(month),
+        },
+      });
 
-  // ─────────────────────────────────────────────
-  // 4️⃣ Brand Profile (THIS WAS FAILING — FIXED)
-  // ─────────────────────────────────────────────
-  const brand = await prisma.brandProfile.upsert({
-    where: { userId: brandUser.id }, // UNIQUE FIELD
-    update: {},
-    create: {
-      userId: brandUser.id,
-      username: "brand_seed",
-      logoUrl: "https://placehold.co/100x100",
-      bio: "Seeded test brand",
-      industryTags: ["tech"],
-    },
-  });
-
-  // ─────────────────────────────────────────────
-  // 5️⃣ Packages
-  // ─────────────────────────────────────────────
-  const reelPackage = await prisma.package.create({
-    data: {
-      creatorId: creator.id,
-      title: "Instagram Reel Promo",
-      description: "1 Reel + Story",
-      price: new Decimal(3000),
-      mediaType: "Instagram Reel",
-      deliverables: ["1 Reel", "1 Story"],
-      deliveryTimeDays: 7,
-      status: "ACTIVE",
-    },
-  });
-
-  const postPackage = await prisma.package.create({
-    data: {
-      creatorId: creator.id,
-      title: "Instagram Post",
-      description: "1 Feed Post",
-      price: new Decimal(2000),
-      mediaType: "Instagram Post",
-      deliverables: ["1 Post"],
-      deliveryTimeDays: 5,
-      status: "ACTIVE",
-    },
-  });
-
-  // ─────────────────────────────────────────────
-  // 6️⃣ Campaign
-  // ─────────────────────────────────────────────
-  const campaign = await prisma.campaign.create({
-    data: {
-      brandId: brand.id,
-      name: "Seed Campaign",
-      budget: new Decimal(10000),
-    },
-  });
-
-  // ─────────────────────────────────────────────
-  // 7️⃣ Collaborations
-  // ─────────────────────────────────────────────
-  const activeCollab = await prisma.collaboration.create({
-    data: {
-      creatorId: creator.id,
-      brandId: brand.id,
-      packageId: reelPackage.id,
-      campaignId: campaign.id,
-      finalCost: new Decimal(3000),
-      status: CollabStatus.ACTIVE,
-    },
-  });
-
-  const completedCollab = await prisma.collaboration.create({
-    data: {
-      creatorId: creator.id,
-      brandId: brand.id,
-      packageId: postPackage.id,
-      campaignId: campaign.id,
-      finalCost: new Decimal(2000),
-      status: CollabStatus.COMPLETED,
-      reportedReach: 15000,
-      reportedEngagement: 5,
-      linksToPosts: {
-        instagram: "https://instagram.com/p/seedpost",
-      },
-    },
-  });
-
-  await prisma.collaboration.create({
-    data: {
-      creatorId: creator.id,
-      brandId: brand.id,
-      packageId: postPackage.id,
-      finalCost: new Decimal(2000),
-      status: CollabStatus.PENDING,
-    },
-  });
-
-  // ─────────────────────────────────────────────
-  // 8️⃣ Transactions
-  // ─────────────────────────────────────────────
-  await prisma.transaction.createMany({
-    data: [
-      {
-        creatorId: creator.id,
-        walletId: wallet.id,
-        userId: creatorUser.id,
-        amount: new Decimal(2000),
-        type: TransactionType.PAYOUT,
-        status: TransactionStatus.COMPLETED,
-        collabId: completedCollab.id,
-      },
-      {
-        creatorId: creator.id,
-        walletId: wallet.id,
-        userId: creatorUser.id,
-        amount: new Decimal(3000),
-        type: TransactionType.PAYMENT,
-        status: TransactionStatus.PENDING,
-        collabId: activeCollab.id,
-      },
-    ],
-  });
+      await prisma.creatorDailyMetrics.create({
+        data: {
+          creatorId: creator.creatorProfile!.id,
+          date: monthsAgo(month),
+          followers,
+          reach: followers * 2,
+          impressions: followers * 3,
+          engagement: Math.floor(followers * 0.05),
+        },
+      });
+    }
+  }
 
   console.log("✅ Seed completed successfully");
 }
 
 main()
-  .catch(e => {
-    console.error("❌ Seed failed:", e);
+  .catch((e) => {
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

@@ -11,7 +11,6 @@ generator client {
 }
 
 // --- ENUMS ---
-// Enums provide type-safety for specific string fields
 
 enum UserType {
   CREATOR
@@ -74,26 +73,27 @@ model User {
   brandProfile   BrandProfile?
   wallet         Wallet?
   transactions   Transaction[]
-  socialAccounts    CreatorSocialAccount[]
+  socialAccounts CreatorSocialAccount[]
 }
 
 // --- CREATOR SIDE MODELS ---
 
 model CreatorProfile {
-  id            String          @id @default(cuid())
-  user          User            @relation(fields: [userId], references: [id])
-  userId        String          @unique // 1-to-1 relation with User
-  bio           String?         @db.Text
-  username      String          @unique
-  location      String?
-  niche         String?
-  profilePicUrl String?
-  introClipUrl  String? // For the 20sec intro clip
-  nicheTags     String[]
-  portfolio     Json? // Store as [{ "title": "...", "url": "..." }]
-  mlScore       Float? // Your internal ML score
-  category      CreatorCategory
-  platformLinks Json? // Store as [{ "platform": "instagram", "url": "..." }]
+  id             String          @id @default(cuid())
+  user           User            @relation(fields: [userId], references: [id])
+  userId         String          @unique // 1-to-1 relation with User
+  bio            String?         @db.Text
+  username       String          @unique
+  location       String?
+  niche          String?
+  profilePicUrl  String?
+  introClipUrl   String? // For the 20sec intro clip
+  nicheTags      String[]
+  portfolio      Json? // Store as [{ "title": "...", "url": "..." }]
+  mlScore        Float? // Your internal ML score
+  category       CreatorCategory
+  platformLinks  Json? // Store as [{ "platform": "instagram", "url": "..." }]
+  follower_count Int             @default(0)
 
   // Relations
   packages          Package[]
@@ -130,8 +130,8 @@ model Package {
 model BrandProfile {
   id           String   @id @default(cuid())
   user         User     @relation(fields: [userId], references: [id])
-  userId       String   @unique // 1-to-1 relation with User
-  username     String
+  userId       String   @unique
+  username     String   @unique
   logoUrl      String?
   bio          String?  @db.Text
   industryTags String[]
@@ -141,6 +141,7 @@ model BrandProfile {
   campaigns      Campaign[]
   collaborations Collaboration[]
 
+  @@unique([id, username])
   @@index([userId])
 }
 
@@ -166,12 +167,15 @@ model Collaboration {
   id         String         @id @default(cuid())
   creator    CreatorProfile @relation(fields: [creatorId], references: [id])
   creatorId  String
-  brand      BrandProfile   @relation(fields: [brandId], references: [id])
+  brand      BrandProfile   @relation(fields: [brandId, brandName], references: [id, username])
   brandId    String
+  brandName  String
   package    Package        @relation(fields: [packageId], references: [id])
   packageId  String
   campaign   Campaign?      @relation(fields: [campaignId], references: [id])
   campaignId String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
   finalCost Decimal      @db.Decimal(10, 2) // The agreed-upon price
   status    CollabStatus @default(PENDING)
@@ -245,6 +249,7 @@ model Transaction {
   type      TransactionType
   status    TransactionStatus @default(PENDING)
   createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
   // Link to the collab that triggered this payment/payout
   collaboration Collaboration? @relation(fields: [collabId], references: [id])
@@ -256,10 +261,10 @@ model Transaction {
 }
 
 model CreatorFollowerSnapshot {
-  id         String   @id @default(cuid())
-  creatorId  String
-  followers  Int
-  recordedAt DateTime @default(now())
+  id                  String   @id @default(cuid())
+  creatorId           String
+  followers_increased Int
+  recordedAt          DateTime @default(now())
 
   creator CreatorProfile @relation(fields: [creatorId], references: [id])
 
@@ -308,18 +313,18 @@ model CreatorDailyMetrics {
 }
 
 model CreatorSocialAccount {
-  id                 String    @id @default(cuid())
-  creatorId          String
-  platform           String // INSTAGRAM
-  accessToken        String
-  tokenExpiresAt     DateTime?
-  igAccountId        String?
-  pageId             String?
-  connected          Boolean  @default(false)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  creatorId      String
+  platform       String // INSTAGRAM
+  accessToken    String
+  tokenExpiresAt DateTime?
+  igAccountId    String?
+  pageId         String?
+  connected      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  creator   User     @relation(fields: [creatorId], references: [id])
+  creator User @relation(fields: [creatorId], references: [id])
 
   @@unique([creatorId, platform])
 }

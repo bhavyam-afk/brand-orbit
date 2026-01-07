@@ -6,7 +6,6 @@ export async function GET(
   { params }: { params: { username: string | string[] | Promise<string> | Promise<string[]> } }
 ) {
   try {
-    // Await params and normalize username
     const resolvedParams: any = await params;
     let usernameRaw: unknown = resolvedParams?.username;
     if (usernameRaw instanceof Promise) {
@@ -16,7 +15,8 @@ export async function GET(
     if (!username || typeof username !== "string") {
       return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
-    // Fetch influencer's packages
+
+    // Fetch influencer whose package you want and then package array as the tables are linked to each other. 
     const influencer = await prisma.creatorProfile.findUnique({
       where: { username },
       include: { packages: true },
@@ -44,6 +44,8 @@ export async function GET(
   }
 }
 
+
+
 export async function POST(
   req: Request,
   { params }: { params: { username: string | string[] | Promise<string> | Promise<string[]> } }
@@ -51,7 +53,6 @@ export async function POST(
   try {
     const body = await req.json();
     const { title, description, price, deliveryTimeDays, thumbnailUrl, mediaType, deliverables, status } = body;
-    console.log('create package body:', { title, description, price, deliveryTimeDays, thumbnailUrl, mediaType, deliverables, status });
 
     const resolvedParams: any = await params;
     let usernameRaw: unknown = resolvedParams?.username;
@@ -61,9 +62,9 @@ export async function POST(
     const username = Array.isArray(usernameRaw) ? usernameRaw[0] : String(usernameRaw ?? '');
     if (!username) return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
 
+
     const creator = await prisma.creatorProfile.findUnique({ where: { username } });
     if (!creator) return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
-
     if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400 });
 
     // sanitize price: remove commas/currency symbols
@@ -83,6 +84,8 @@ export async function POST(
           thumbnailUrl: thumbnailUrl ? String(thumbnailUrl) : null,
           mediaType: mediaType ? String(mediaType) : 'Other',
           deliverables: Array.isArray(deliverables) ? deliverables : deliverables ? String(deliverables).split(',').map((s) => s.trim()) : [],
+          // Allow client to request initial status (e.g., ACTIVE or DRAFT). Prisma will use default if omitted.
+          ...(status ? { status: String(status).toUpperCase() as any } : {}),
         },
       });
     } catch (dbErr) {
