@@ -10,14 +10,8 @@ export async function GET(
     if (Array.isArray(username)) username = username[0];
 
     let profile: any = null;
-
-    if (username) {
-      // Find brand profile by the username from the route param
-      profile = await prisma.brandProfile.findFirst({ where: { username } });
-    } else {
-      // If no username provided, return the first brand profile as a fallback
-      profile = await prisma.brandProfile.findFirst();
-    }
+      profile = await prisma.brandProfile.findUnique({ where: { username }, include: { collaborations: true } });
+   
 
     if (!profile) {
       return NextResponse.json({ error: "Brand profile not found" }, { status: 404 });
@@ -38,6 +32,7 @@ export async function GET(
       bio: profile.bio,
       industryTags,
       socialLinks,
+      collaborations: profile.collaborations || [],
     };
 
     return NextResponse.json(response, { status: 200 });

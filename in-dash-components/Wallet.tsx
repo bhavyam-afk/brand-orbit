@@ -3,6 +3,7 @@
 import React from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
+import { set } from 'mongoose';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -16,65 +17,90 @@ interface Transaction {
 }
 
 interface WalletData {
-  earnings: { month: string; amount: number }[]; // last 6 months
+  currentBalance: number;
+  pendingBalance: number;
+  totalEarned: number;
   totalWithdrawn: number;
-  pendingAmount: number;
-  balance: number;
+  totalSpent: number;
   transactions: Transaction[];
 }
 
-interface WalletProps {
-  initialData?: WalletData;
-}
 
-const mockData = {
-  earnings: { monthlyData: { labels: ['Jan','Feb','Mar','Apr','May','Jun'], earnings: [0,0,0,0,0,0] } },
-};
-
-const Wallet: React.FC<WalletProps> = ({ initialData }) => {
-  const [data, setData] = React.useState<WalletData | null>(initialData || null);
-  const [loading, setLoading] = React.useState(!initialData);
+const Wallet: React.FC<WalletData> = () => {
+  const [data, setData] = React.useState<WalletData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [earnings, setEarnings] = React.useState<{ month: string; amount: number }[]>([]);
+  const [earningmonths, setEarningmonths] = React.useState<string[]>([]);
 
   React.useEffect(() => {
-    let cancelled = false;
-    const fetchWallet = async () => {
-      try {
-        setLoading(true);
-        const username = typeof window !== 'undefined' ? window.location.pathname.split('/')[2] : '';
-        if (!username) return;
-        const res = await fetch(`/api/influencer2/${username}/wallet`);
-        const walletData = await res.json();
-        if (cancelled) return;
-        if (res.ok) {
-          // normalize types: backend returns earnings array and transactions
-          const normalized: WalletData = {
-            earnings: Array.isArray(walletData.earnings) ? walletData.earnings.map((e: any) => ({ month: e.month, amount: Number(e.amount || 0) })) : [],
-            totalWithdrawn: Number(walletData.totalWithdrawn || 0),
-            pendingAmount: Number(walletData.pendingAmount || 0),
-            balance: Number(walletData.balance || 0),
-            transactions: Array.isArray(walletData.transactions) ? walletData.transactions.map((t: any) => ({
-              id: t.id,
-              amount: t.amount,
-              type: t.type,
-              status: t.status,
-              createdAt: t.createdAt,
-            })) : [],
-          };
-          setData(normalized);
-        } else {
-          console.error('Failed to fetch wallet:', walletData.error);
-        }
-      } catch (error) {
-        if (!cancelled) console.error('Error fetching wallet:', error);
-      } finally {
-        if (!cancelled) setLoading(false);
+    const username = typeof window !== 'undefined' ? window.location.pathname.split('/')[2] : '';
+    if (!username) return;
+
+    async function fetchcalls() {
+
+      setLoading(true);
+      const res = await fetch(`/api/influencer/${username}/wallet`);
+      const walletData = await res.json();
+
+      // Normalize backend response to our frontend WalletData shape
+      const normalized = {
+        currentBalance: Number(walletData.currentBalance ?? 0),
+        pendingBalance: Number(walletData.pendingBalance ?? 0),
+        totalEarned: Number(walletData.totalEarned ?? 0),
+        totalWithdrawn: Number(walletData.totalWithdrawn ?? 0),
+        totalSpent: Number(walletData.totalSpent ?? 0),
+        transactions: Array.isArray(walletData.transactions) ? walletData.transactions.map((t: any) => ({
+          id: String(t.id ?? t._id ?? ''),
+          amount: Number(t.amount ?? 0),
+          type: t.type ?? t.transactionType ?? '',
+          status: t.status ?? t.state ?? '',
+          createdAt: t.createdAt ?? t.date ?? '',
+        })) : [],
+      } as WalletData;
+
+      setData(normalized);
+
+      // lastest 5 months
+      const months: string[] = [];
+      for (let i = 4; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - i);
+        const shortMonth = d.toLocaleString('default', { month: 'short' });
+        months.push(shortMonth);
       }
+      setEarningmonths(months);
+
+      // Compute earnings per month from transactions (fallback when backend doesn't provide `earnings`)
+      const txs = normalized.transactions || [];
+      const earningsPerMonth = months.map((mon, idx) => {
+        // month index relative to now: i from 4..0 -> months[0] is oldest
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - (4 - idx));
+        const year = d.getFullYear();
+        const month = d.getMonth();
+
+        const sum = txs.reduce((acc, t) => {
+          const tDate = new Date(t.createdAt || t.date || '');
+          if (tDate.getFullYear() === year && tDate.getMonth() === month) {
+            const amt = Number(t.amount ?? 0);
+            // consider deposits/payments as earnings (positive amounts)
+            return acc + (amt > 0 ? amt : 0);
+          }
+          return acc;
+        }, 0);
+        return { month: mon, amount: sum };
+      });
+
+      setEarnings(earningsPerMonth);
+
+      setLoading(false);
     };
 
-    if (!initialData) fetchWallet();
-    return () => { cancelled = true; };
-  }, [initialData]);
+    fetchcalls();
 
+  }, []);
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -98,6 +124,45 @@ const Wallet: React.FC<WalletProps> = ({ initialData }) => {
     return <div className="text-center py-8">No wallet data available</div>;
   }
 
+  const earningsData = {
+    labels: earningmonths,
+    datasets: [
+      {
+        label: "Earnings (₹)",
+        data: earnings.map(e => e.amount),
+        backgroundColor: "rgba(34,211,238,0.9)",
+        borderColor: "#0891b2",
+        borderWidth: 1,
+        borderRadius: 8,
+        barThickness: 18,
+        barPercentage: 0.7,
+        categoryPercentage: 0.7,
+      },
+    ],
+  };
+   const earningsOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: true },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: "#fff" } },
+      y: {
+        beginAtZero: true, grid: { color: "#334155" }, ticks: ({
+          color: "#fff",
+          callback: function (value: any) {
+            const n = Number(value);
+            if (isNaN(n)) return String(value);
+            if (n >= 1000) return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'k';
+            return String(n);
+          },
+        } as unknown) as any,
+      },
+    },
+  };
+
   return (
     <div className="bg-[#232946] rounded-2xl shadow-lg p-8 flex flex-col gap-8 border border-[#7b52d3]">
       {/* Top Section - Earnings Overview */}
@@ -105,52 +170,23 @@ const Wallet: React.FC<WalletProps> = ({ initialData }) => {
         {/* Chart */}
         <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
           <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Earnings vs Goal</h2>
-          <Bar
-            data={{
-              labels: data && data.earnings ? data.earnings.map(e => {
-                const parts = e.month.split('-');
-                // month label like 2026-01 -> Jan
-                const monthIndex = Number(parts[1]) - 1;
-                return new Date(0, monthIndex).toLocaleString('en-US', { month: 'short' });
-              }) : mockData.earnings.monthlyData.labels,
-              datasets: [
-                {
-                  label: 'Monthly Earnings',
-                  data: data && data.earnings ? data.earnings.map(e => e.amount) : mockData.earnings.monthlyData.earnings,
-                  backgroundColor: 'rgba(123, 82, 211, 0.6)',
-                  borderColor: 'rgba(123, 82, 211, 1)',
-                  borderWidth: 1,
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              plugins: {
-                legend: {
-                  position: 'top' as const,
-                },
-                title: {
-                  display: false,
-                },
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                },
-              },
-            }}
-          />
+          <div style={{ height: 240 }}>
+            <Bar
+              data={earningsData}
+              options={earningsOptions}
+            />
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div className="bg-white/5 p-4 rounded-lg">
               <p className="text-gray-400">Total Earnings</p>
-                <p className="text-2xl font-bold text-[#7b52d3]">
-                {formatCurrency(Number((data?.earnings || []).reduce((s, x) => s + Number(x.amount || 0), 0)))}
+              <p className="text-2xl font-bold text-[#7b52d3]">
+                {formatCurrency(Number((earnings || []).reduce((s, x) => s + Number(x.amount || 0), 0)))}
               </p>
             </div>
             <div className="bg-white/5 p-4 rounded-lg">
               <p className="text-gray-400">Current Balance</p>
               <p className="text-2xl font-bold text-[#7b52d3]">
-                {formatCurrency(Number(data?.balance ?? 0))}
+                {formatCurrency(Number(data?.currentBalance ?? 0))}
               </p>
             </div>
           </div>
@@ -163,7 +199,7 @@ const Wallet: React.FC<WalletProps> = ({ initialData }) => {
             <div className="bg-white/5 p-4 rounded-lg">
               <p className="text-gray-400">Pending Balance</p>
               <p className="text-2xl font-bold text-yellow-500">
-                {formatCurrency(Number(data?.pendingAmount ?? 0))}
+                {formatCurrency(Number(data?.pendingBalance ?? 0))}
               </p>
               <p className="text-sm text-gray-400 mt-2">Awaiting clearance</p>
             </div>
@@ -204,12 +240,8 @@ const Wallet: React.FC<WalletProps> = ({ initialData }) => {
                 <span className="text-[#7b52d3] font-bold">
                   {formatCurrency(Number(transaction.amount))}
                 </span>
-                <span className={`px-2 py-1 rounded-full text-xs ${transaction.status === 'COMPLETED'
-                  ? 'bg-green-500/20 text-green-500'
-                  : transaction.status === 'PENDING'
-                    ? 'bg-yellow-500/20 text-yellow-500'
-                    : 'bg-red-500/20 text-red-500'
-                  }`}>
+                <span className={`px-2 py-1 rounded-full text-xs ${transaction.status === 'COMPLETED' ? 'bg-green-500/20 text-green-500'
+                  : transaction.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500' }`}> 
                   {transaction.status ? (transaction.status.charAt(0) + transaction.status.slice(1).toLowerCase()) : ''}
                 </span>
               </div>

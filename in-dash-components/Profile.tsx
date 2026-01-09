@@ -12,8 +12,9 @@ interface ProfileData {
   niche: string | null;
   profilePicUrl: string | null;
   nicheTags: string[];
-  category: string;
+  category: string | null;
   platformLinks: any | null;
+  rating: number | 0;
   transactions?: any[];
   collaborations?: any[];
 }
@@ -31,64 +32,102 @@ const Profile: React.FC = () => {
     if (!username) return;
 
     async function fetchcalls() {
-      const res = await fetch(`/api/influencer/${username}/profile`);
-      const profileData = await res.json();
-      setData(profileData);
+      try {
+        const res = await fetch(`/api/influencer/${username}/profile`);
+        if (!res.ok) throw new Error(`Failed to fetch profile (${res.status})`);
+        const profileData = await res.json().catch(() => ({}));
+        // debug: log the raw profile payload to inspect collaborations shape
+        console.debug('profileData (raw)', profileData);
+        setData(profileData as ProfileData);
 
-      // Get last 4 completed collaborations.
-      const pos_status = profileData.collaborations.filter((c: any) => c.status === "COMPLETED");
-      const last4 = (pos_status).slice(-4).reverse();
-      setCollaborations(last4);
+        // Safely get collaborations array and pick last 4 completed
+        const collaborationsArr = Array.isArray(profileData?.collaborations) ? profileData.collaborations : [];
+        console.debug('collaborationsArr', collaborationsArr);
 
-      // lastest 5 months
-      const months: string[] = [];
-      for (let i = 4; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(1);
-        d.setMonth(d.getMonth() - i);
-        const shortMonth = d.toLocaleString('default', { month: 'short' });
-        months.push(shortMonth);
+        // Normalize collaborations into a consistent shape
+        const normalize = (c: any) => {
+          const pkg = c.package || (Array.isArray(c.packageCollaborations) && c.packageCollaborations[0] && c.packageCollaborations[0].package) || null;
+          const camp = c.campaign || (Array.isArray(c.campaignCollaborations) && c.campaignCollaborations[0] && c.campaignCollaborations[0].campaign) || null;
+          const brand = c.brand || c.brandProfile || null;
+
+          const statuses: string[] = [];
+          if (c?.status) statuses.push(String(c.status).toUpperCase());
+          if (Array.isArray(c.packageCollaborations)) c.packageCollaborations.forEach((pc: any) => statuses.push(String(pc.status || '').toUpperCase()));
+          if (Array.isArray(c.campaignCollaborations)) c.campaignCollaborations.forEach((cc: any) => statuses.push(String(cc.status || '').toUpperCase()));
+
+          const status = statuses.find(s => s) || '';
+
+          return {
+            id: c.id,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+            title: pkg?.title || camp?.name || c.packageTitle || brand?.username || 'unknown',
+            thumbnailUrl: brand?.logoUrl || pkg?.thumbnailUrl || camp?.thumbnailUrl || null,
+            brandUsername: brand?.username || c.brandName || null,
+            status,
+            raw: c,
+          };
+        };
+
+        const normalized = collaborationsArr.map(normalize);
+        console.debug('normalized collabs', normalized);
+
+        // Prefer completed collabs; fallback to most recent if none completed
+        const completed = normalized.filter((n: any) => String(n.status || '').toUpperCase() === 'COMPLETED');
+        const chosen = (completed.length ? completed : normalized).slice(-4).reverse();
+        console.debug('chosen collabs (to display)', chosen);
+        setCollaborations(chosen);
+
+        // lastest 5 months
+        const months: string[] = [];
+        for (let i = 4; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(1);
+          d.setMonth(d.getMonth() - i);
+          const shortMonth = d.toLocaleString('default', { month: 'short' });
+          months.push(shortMonth);
+        }
+        setEarningsMonths(months);
+
+        // sum of each month's completed payouts
+        const transactions = Array.isArray(profileData?.transactions) ? profileData.transactions : [];
+        const totals = months.map((m) => {
+          return transactions.reduce((acc: number, t: any) => {
+            const dateStr = t?.updatedAt || t?.createdAt;
+            if (!dateStr) return acc;
+            const tMonth = new Date(dateStr).toLocaleString('default', { month: 'short' });
+
+            if (String(t?.type ?? '').toUpperCase() === 'PAYOUT' && String(t?.status ?? '').toUpperCase() === 'COMPLETED' && tMonth === m) {
+              const amt = Number(t.amount) || 0;
+              return acc + amt;
+            }
+            return acc;
+          }, 0);
+        });
+        setEarningsTotals(totals);
+
+        // followers snapshots
+        const daly_snapshot = await fetch(`/api/influencer/${username}/followers`);
+        const fjson = await daly_snapshot.json().catch(() => ({}));
+        const snapshots = Array.isArray(fjson?.snapshots) ? fjson.snapshots : [];
+        const ftotals: number[] = months.map((m) =>
+          snapshots.reduce((acc: number, s: any) => {
+            const sMonth = s?.recordedAt ? new Date(s.recordedAt).toLocaleString("default", { month: "short" }) : null;
+            if (sMonth === m) return acc + (Number(s?.followers_increased) || 0);
+            return acc;
+          }, 0)
+        );
+        setFollowersTotals(ftotals);
+      } catch (err) {
+        console.error('Error fetching profile data', err);
+      } finally {
+        setLoading(false);
       }
-      setEarningsMonths(months);
-
-      // sum of each month's completed payouts
-      const transactions = Array.isArray(profileData.transactions) ? profileData.transactions : [];
-      const totals = months.map((m) => {
-        return transactions.reduce((acc: number, t: any) => {
-          // prefer updatedAt, then createdAt
-          const dateStr = t.updatedAt || t.createdAt;
-          if (!dateStr) return acc;
-          const tMonth = new Date(dateStr).toLocaleString('default', { month: 'short' });
-
-          // Only sum completed payout transactions
-          if (t.type === 'PAYOUT' && t.status === 'COMPLETED' && tMonth === m) {
-            const amt = Number(t.amount) || 0;
-            return acc + amt;
-          }
-          return acc;
-        }, 0);
-      });
-      setEarningsTotals(totals);
-
-
-      const daly_snapshot = await fetch(`/api/influencer/${username}/followers`);
-      const fjson = await daly_snapshot.json();
-      const snapshots = fjson.snapshots;
-      const ftotals: number[] = months.map((m) =>
-        snapshots.reduce((acc: number, s: any) => {
-          const sMonth = s?.recordedAt ? new Date(s.recordedAt).toLocaleString("default", { month: "short" }) : null;
-          if (sMonth === m) return acc + (Number(s.followers_increased) || 0);
-          return acc;
-        }, 0)
-      );
-      setFollowersTotals(ftotals);
-
-      setLoading(false);
     }
 
     fetchcalls();
   }, []);
-
+  
   if (loading) {
     return <div className="text-center py-8">Loading profile...</div>;
   }
@@ -211,7 +250,7 @@ const Profile: React.FC = () => {
         <div className="flex-1 flex flex-col gap-6">
           {/* Past 4 Collaborations */}
           <div className="bg-cyan-500 rounded-2xl shadow-lg p-4 flex flex-col items-center">
-            <div className="font-semibold mb-2 text-lg">Last {collaborations.length} Collaborations</div>
+            <div className="font-semibold mb-2 text-lg">Last {collaborations.length} Collaboration(s)</div>
             <div className="flex flex-row gap-4">
               {collaborations.length === 0 && (
                 <div className="text-sm text-gray-300">No Collaborations yet</div>
@@ -223,10 +262,10 @@ const Profile: React.FC = () => {
                 >
                   {/* Thumbnail */}
                   <div className="w-14 h-14 rounded-full overflow-hidden mb-2 border-2 border-cyan-400">
-                    {c.brand?.logoUrl || c.package?.thumbnailUrl ? (
+                    {c.thumbnailUrl ? (
                       <img
-                        src={c.brand?.logoUrl || c.package?.thumbnailUrl}
-                        alt="brand"
+                        src={c.thumbnailUrl}
+                        alt="collab"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -234,9 +273,9 @@ const Profile: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Brand name */}
+                  {/* Display title (package title or campaign name) */}
                   <div className="font-bold text-cyan-700 text-sm mb-1 text-center">
-                    @{c.brandName}
+                    @{c.title || 'unknown'}
                   </div>
 
                   {/* Date */}

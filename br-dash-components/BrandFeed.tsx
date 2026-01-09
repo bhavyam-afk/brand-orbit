@@ -23,6 +23,7 @@ const BrandFeed: React.FC = () => {
   const [requestingPackageId, setRequestingPackageId] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestedPackageIds, setRequestedPackageIds] = useState<string[]>([]);
+  const [activePackageIds, setActivePackageIds] = useState<string[]>([]);
 
   useEffect(() => {
     // derive username from path: /brand/[username]/dashboard
@@ -85,7 +86,7 @@ const BrandFeed: React.FC = () => {
     setPkgsLoading(true);
     try {
       const username = encodeURIComponent(creator.username);
-      const res = await fetch(`/api/influencer2/${username}/packages`);
+      const res = await fetch(`/api/influencer/${username}/packages`);
       if (!res.ok) {
         setCreatorPackages([]);
       } else {
@@ -101,14 +102,25 @@ const BrandFeed: React.FC = () => {
           if (collRes.ok) {
             const collData = await collRes.json().catch(() => ({}));
             const collList = Array.isArray(collData) ? collData : Array.isArray(collData?.collaborations) ? collData.collaborations : [];
-            const pendingForCreator = collList.filter((c: any) => {
-              const status = String(c?.status ?? '').toLowerCase();
-              if (status !== 'pending') return false;
+            // Separate DRAFT (requested) and ACTIVE (accepted) collaborations for this creator
+            const draftIds: string[] = [];
+            const activeIds: string[] = [];
+            collList.forEach((c: any) => {
               const cUsername = c?.creator?.username ?? c?.creatorUsername ?? c?.creator?.user?.username ?? '';
-              return cUsername === creator.username;
+              if (cUsername !== creator.username) return;
+              const pkgCollabs = Array.isArray(c?.packageCollaborations) ? c.packageCollaborations : [];
+              pkgCollabs.forEach((pc: any) => {
+                const pkgId = String(c?.packageId ?? c?.package?.id ?? '');
+                if (!pkgId) return;
+                if (pc.status === 'DRAFT') {
+                  draftIds.push(pkgId);
+                } else if (pc.status === 'ACTIVE') {
+                  activeIds.push(pkgId);
+                }
+              });
             });
-            const ids = pendingForCreator.map((c: any) => String(c?.package?.id ?? c?.packageId ?? c?.package ?? '')).filter(Boolean);
-            setRequestedPackageIds(ids);
+            setRequestedPackageIds(draftIds);
+            setActivePackageIds(activeIds);
           }
         }
       } catch (err) {
@@ -126,6 +138,8 @@ const BrandFeed: React.FC = () => {
     setModalOpen(false);
     setSelectedCreator(null);
     setCreatorPackages([]);
+    setRequestedPackageIds([]);
+    setActivePackageIds([]);
   };
 
   const getBrandUsername = (): string | null => {
@@ -206,16 +220,17 @@ const BrandFeed: React.FC = () => {
                       <div className="mt-2 text-[#7b52d3] font-bold">{p.price ? (typeof p.price === 'string' ? p.price : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(p.price))) : '—'}</div>
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          {requestedPackageIds.includes(String(p.id ?? p.title)) && <span className="text-green-400 text-sm">Requested ✓</span>}
+                          {activePackageIds.includes(String(p.id ?? p.title)) && <span className="text-blue-400 text-sm">Active ✓</span>}
+                          {requestedPackageIds.includes(String(p.id ?? p.title)) && !activePackageIds.includes(String(p.id ?? p.title)) && <span className="text-green-400 text-sm">Requested ✓</span>}
                           {requestError && requestError.length > 0 && <span className="text-red-400 text-sm">{requestError}</span>}
                         </div>
                         <div>
                           <button
                             onClick={() => requestPackage(p)}
-                            disabled={requestingPackageId === (p.id ?? p.title) || requestedPackageIds.includes(String(p.id ?? p.title))}
+                            disabled={requestingPackageId === (p.id ?? p.title) || requestedPackageIds.includes(String(p.id ?? p.title)) || activePackageIds.includes(String(p.id ?? p.title))}
                             className="px-3 py-1 rounded bg-yellow-300 text-black text-sm"
                           >
-                            {requestingPackageId === (p.id ?? p.title) ? 'Requesting…' : requestedPackageIds.includes(String(p.id ?? p.title)) ? 'Requested' : 'Request Package'}
+                            {requestingPackageId === (p.id ?? p.title) ? 'Requesting…' : activePackageIds.includes(String(p.id ?? p.title)) ? 'Active' : requestedPackageIds.includes(String(p.id ?? p.title)) ? 'Requested' : 'Request Package'}
                           </button>
                         </div>
                       </div>

@@ -29,21 +29,39 @@ export async function POST(request: Request, { params }: { params: { username: s
         creatorId: creator.id,
         brandId: brand.id,
         packageId: pkg.id,
-        status: 'PENDING',
+      },
+      include: {
+        packageCollaborations: true,
       },
     });
 
+    // Check if existing collab has an active/draft PackageCollaboration
     if (existing) {
-      return NextResponse.json({ success: true, collaboration: existing, alreadyExists: true });
+      const activePkgCollab = existing.packageCollaborations.find(
+        (pc: any) => pc.status === 'ACTIVE' || pc.status === 'DRAFT'
+      );
+      if (activePkgCollab) {
+        return NextResponse.json({ success: true, collaboration: existing, alreadyExists: true });
+      }
     }
 
+    // Create Collaboration with PackageCollaboration entry
     const collab = await prisma.collaboration.create({
       data: {
         creatorId: creator.id,
         brandId: brand.id,
         packageId: pkg.id,
-        finalCost: pkg.price,
-        status: 'PENDING',
+        packageTitle: pkg.title,
+        // Create PackageCollaboration with DRAFT status (pending creator acceptance)
+        packageCollaborations: {
+          create: {
+            packageId: pkg.id,
+            status: 'DRAFT',
+          },
+        },
+      },
+      include: {
+        packageCollaborations: true,
       },
     });
 

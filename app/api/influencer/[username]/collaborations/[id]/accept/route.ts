@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 
 export async function POST(request: Request, { params }: { params: { username: string; id: string } }) {
   try {
-    const { username, id } = params;
+    const { username, id } = await params;
 
     // find creator by username
     const creator = await prisma.creatorProfile.findUnique({
@@ -16,16 +16,36 @@ export async function POST(request: Request, { params }: { params: { username: s
     if (!creator) return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
 
     // find collaboration and ensure it belongs to this creator
-    const collab = await prisma.collaboration.findUnique({ where: { id } });
+    const collab = await prisma.collaboration.findUnique({ 
+      where: { id },
+      include: {
+        packageCollaborations: true,
+      }
+    });
     if (!collab) return NextResponse.json({ error: 'Collaboration not found' }, { status: 404 });
     if (collab.creatorId !== creator.id) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
 
-    // only allow accepting if currently pending
-    if (collab.status !== 'PENDING') {
+    // Check if PackageCollaboration is in DRAFT state (pending)
+    const pkgCollab = collab.packageCollaborations[0];
+    if (!pkgCollab || pkgCollab.status !== 'DRAFT') {
       return NextResponse.json({ error: 'Collaboration not in pending state', collaboration: collab }, { status: 400 });
     }
 
-    const updated = await prisma.collaboration.update({ where: { id }, data: { status: 'ACTIVE' } });
+    // Update both Collaboration and PackageCollaboration to ACTIVE
+    const updated = await prisma.collaboration.update({ 
+      where: { id }, 
+      data: {
+        packageCollaborations: {
+          update: {
+            where: { id: pkgCollab.id },
+            data: { status: 'ACTIVE' },
+          },
+        },
+      },
+      include: {
+        packageCollaborations: true,
+      },
+    });
 
     return NextResponse.json({ success: true, collaboration: updated });
   } catch (err) {

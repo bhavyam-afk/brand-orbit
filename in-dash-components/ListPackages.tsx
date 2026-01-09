@@ -1,5 +1,6 @@
 "use client";
 
+// price was x when brand booked but the creator went and increased it to y handle this logic as we are adding to collab from package table only. 
 import React, { useEffect, useState } from "react";
 import { AvailabilityCalendar } from "./Calendar";
 
@@ -15,13 +16,7 @@ type Package = {
   status?: string;
 };
 
-interface ListPackagesProps {
-  packages?: Package[];
-  fetchUrl?: string;
-}
-
-
-const ListPackages: React.FC<ListPackagesProps> = () => {
+const ListPackages: React.FC<Package> = () => {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -34,18 +29,22 @@ const ListPackages: React.FC<ListPackagesProps> = () => {
     const username = window.location.pathname.split("/")[2];
     if (!username) return;
 
-    async function fetchcalls(){
-
-      const res = await fetch(`/api/influencer/${username}/packages`);
-      const json = await res.json();
-      setPackages(json.packages); 
-
-
-      setLoading(false);
+    async function fetchcalls() {
+      try {
+        // Fetch packages
+        const res = await fetch(`/api/influencer/${username}/packages`);
+        const json = await res.json();
+        const pkgs = Array.isArray(json?.packages) ? json.packages : [];
+        setPackages(pkgs);
+      } catch (err) {
+        console.error('Failed to fetch packages', err);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchcalls();
   }, []);
-  
+
 
   const formatPrice = (p: string | number) => {
     const num = typeof p === 'string' ? Number(p) : p;
@@ -78,7 +77,7 @@ const ListPackages: React.FC<ListPackagesProps> = () => {
 
       try {
         let hi: string = 'ACTIVE';
-        if(packages.length >= 2){
+        if (packages.length >= 2) {
           hi = 'DRAFT';
         }
         const res = await fetch(`/api/influencer/${username}/packages`, {
@@ -151,23 +150,25 @@ const ListPackages: React.FC<ListPackagesProps> = () => {
             <div className="w-full h-full flex flex-col gap-6">
 
               {showForm && (
-                <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-4">
-                  <div className="flex flex-col md:flex-row gap-3">
-                    <input name="title" value={form.title} onChange={handleChange} placeholder="Package title" className="flex-1 px-3 py-2 border rounded" />
-                    <input name="mediaType" value={form.mediaType} onChange={handleChange} placeholder="Media type (e.g. Instagram Post)" className="flex-1 px-3 py-2 border rounded" />
-                  </div>
-                  <textarea name="description" value={form.description} onChange={handleChange} placeholder="Short description" className="w-full mt-3 px-3 py-2 border rounded" />
-                  <div className="flex gap-2 mt-3">
-                    <input name="price" value={form.price} onChange={handleChange} placeholder="Price (INR)" className="px-3 py-2 border rounded w-32" />
-                    <input name="deliveryTimeDays" value={form.deliveryTimeDays} onChange={handleChange} placeholder="Delivery days" className="px-3 py-2 border rounded w-32" />
-                    <input name="thumbnailUrl" value={form.thumbnailUrl} onChange={handleChange} placeholder="Thumbnail URL" className="flex-1 px-3 py-2 border rounded" />
-                  </div>
-                  <input name="deliverables" value={form.deliverables} onChange={handleChange} placeholder="Deliverables (comma separated)" className="w-full mt-3 px-3 py-2 border rounded" />
-                  <div className="flex gap-2 mt-3">
-                    <button type="submit" onClick={handleSubmit} className="px-4 py-2 bg-[#7b52d3] text-white rounded">Save package</button>
-                    <button type="button" onClick={handleCancel} className="px-4 py-2 border rounded">Cancel</button>
-                  </div>
-                </form>
+                <div className="package_form fixed inset-0 z-50 flex items-center justify-center" style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} >
+                  <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-4">
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <input name="title" value={form.title} onChange={handleChange} placeholder="Package title" className="flex-1 px-3 py-2 border rounded" />
+                      <input name="mediaType" value={form.mediaType} onChange={handleChange} placeholder="Media type (e.g. Instagram Post)" className="flex-1 px-3 py-2 border rounded" />
+                    </div>
+                    <textarea name="description" value={form.description} onChange={handleChange} placeholder="Short description" className="w-full mt-3 px-3 py-2 border rounded" />
+                    <div className="flex gap-2 mt-3">
+                      <input name="price" value={form.price} onChange={handleChange} placeholder="Price (INR)" className="px-3 py-2 border rounded w-32" />
+                      <input name="deliveryTimeDays" value={form.deliveryTimeDays} onChange={handleChange} placeholder="Delivery days" className="px-3 py-2 border rounded w-32" />
+                      <input name="thumbnailUrl" value={form.thumbnailUrl} onChange={handleChange} placeholder="Thumbnail URL" className="flex-1 px-3 py-2 border rounded" />
+                    </div>
+                    <input name="deliverables" value={form.deliverables} onChange={handleChange} placeholder="Deliverables (comma separated)" className="w-full mt-3 px-3 py-2 border rounded" />
+                    <div className="flex gap-2 mt-3">
+                      <button type="submit" onClick={handleSubmit} className="px-4 py-2 bg-[#7b52d3] text-white rounded">Save package</button>
+                      <button type="button" onClick={handleCancel} className="px-4 py-2 border rounded">Cancel</button>
+                    </div>
+                  </form>
+                </div>
               )}
 
 

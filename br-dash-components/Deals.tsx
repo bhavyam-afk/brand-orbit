@@ -32,8 +32,8 @@ const Deals = () => {
         const res = await fetch(`/api/brand2/${username}/collaborations`, { cache: 'no-store' })
         if (!res.ok) throw new Error(`Failed to fetch (${res.status})`)
         const data = await res.json()
-        const list = Array.isArray(data) ? data : (data.collabs ?? data)
-        if (mounted) setCollabs(list)
+        const list = Array.isArray(data) ? data : (data.collaborations ?? data.collabs ?? data)
+        if (mounted) setCollabs(Array.isArray(list) ? list : [])
       } catch (err: any) {
         if (mounted) setError(err?.message ?? 'Failed to load collaborations')
       } finally {

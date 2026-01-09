@@ -11,6 +11,7 @@ type BrandProfile = {
   bio?: string | null;
   industryTags?: string[];
   socialLinks?: any;
+  collaborations?: any[];
 };
 
 export default function Profile() {
@@ -40,35 +41,18 @@ export default function Profile() {
       setCollaborations([]);
       return;
     }
-    
-    const collabUrl = `/api/brand2/${encodeURIComponent(resolvedUsername)}/collaborations`;
 
     setLoading(true);
 
-    const fetchProfile = async () => {
-      fetch(`/api/brand2/${resolvedUsername}/profile`)
-        .then(res => res.json())
-        .then(setProfile)
-        .catch(err => console.error("profile fetch failed", err)) 
-        .finally(() => setLoading(false));
-    };
-
-    const fetchCollabs = async () => {
-      try {
-        const res = await fetch(collabUrl);
-        const ct = String(res.headers.get('content-type') || '');
-        if (!res.ok || !ct.includes('application/json')) return setCollaborations([]);
-        const d = await res.json().catch(() => ({}));
-        const collabs = d?.collaborations ?? d ?? [];
-        setCollaborations(Array.isArray(collabs) ? collabs.slice(0, 3) : []);
-      } catch (e) {
-        console.error('Failed fetching brand collaborations', e);
-        setCollaborations([]);
-      }
+    async function fetchProfile(){
+      const res = await fetch(`/api/brand2/${resolvedUsername}/profile`);
+      const data = await res.json();
+      setProfile(data);
+      setCollaborations(data?.collaborations || []);
+      setLoading(false);
     };
 
     fetchProfile();
-    fetchCollabs();
   }, []);
 
   return (
@@ -118,8 +102,7 @@ export default function Profile() {
                         <img src={c.package.thumbnailUrl} alt="pkg" className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center text-gray-300">🎬</div>
                       )}
                     </div>
-                    <div className="font-semibold text-sm text-yellow-300">{c.package?.title ?? c.campaign?.name ?? '—'}</div>
-                    <div className="text-xs text-gray-400">@{c.creator?.username ?? 'creator'}</div>
+                    <div className="font-semibold text-sm text-yellow-300">@{c.package?.title ?? c.creatorName ?? '—'}</div>
                     <div className="text-xs text-gray-500 mt-1">{new Date(c.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}

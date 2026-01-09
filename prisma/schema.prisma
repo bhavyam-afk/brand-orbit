@@ -57,6 +57,13 @@ enum AvailabilityStatus {
   TENTATIVE
 }
 
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
 // --- CORE MODELS ---
 
 model User {
@@ -73,7 +80,6 @@ model User {
   brandProfile   BrandProfile?
   wallet         Wallet?
   transactions   Transaction[]
-  socialAccounts CreatorSocialAccount[]
 }
 
 // --- CREATOR SIDE MODELS ---
@@ -96,34 +102,19 @@ model CreatorProfile {
   follower_count Int             @default(0)
 
   // Relations
-  packages          Package[]
-  collaborations    Collaboration[]
-  transaction       Transaction[]
-  followerSnapshots CreatorFollowerSnapshot[]
-  availabilities    CreatorAvailability[]
-  dailyMetrics      CreatorDailyMetrics[]
+  packages           Package[]
+  collaborations     Collaboration[]
+  transaction        Transaction[]
+  followerSnapshots  CreatorFollowerSnapshot[]
+  availabilities     CreatorAvailability[]
+  dailyMetrics       CreatorDailyMetrics[]
+  socialAccounts     CreatorSocialAccount[]
+  rawSocialSnapshots CreatorSocialRawSnapshot[]
 
+  @@unique([id, username])
   @@index([userId])
 }
 
-model Package {
-  id               String         @id @default(cuid())
-  creator          CreatorProfile @relation(fields: [creatorId], references: [id])
-  creatorId        String
-  title            String
-  description      String?        @db.Text
-  thumbnailUrl     String?
-  mediaType        String // e.g., "Instagram Post", "TikTok Video"
-  deliverables     String[] // e.g., ["1 Post", "1 Story"]
-  deliveryTimeDays Int
-  price            Decimal        @db.Decimal(10, 2) // Price for the package 
-  status           PackageStatus  @default(DRAFT)
-
-  // Relations
-  collaborations Collaboration[]
-
-  @@index([creatorId])
-}
 
 // --- BRAND SIDE MODELS ---
 
@@ -145,18 +136,41 @@ model BrandProfile {
   @@index([userId])
 }
 
-model Campaign {
-  id        String       @id @default(cuid())
-  brand     BrandProfile @relation(fields: [brandId], references: [id])
-  brandId   String
-  name      String
-  budget    Decimal?     @db.Decimal(12, 2)
-  startDate DateTime?
-  endDate   DateTime?
+model Package {
+  id               String         @id @default(cuid())
+  creator          CreatorProfile @relation(fields: [creatorId], references: [id])
+  creatorId        String
+  title            String
+  description      String?        @db.Text
+  thumbnailUrl     String?
+  mediaType        String // e.g., "Instagram Post", "TikTok Video"
+  deliverables     String[] // e.g., ["1 Post", "1 Story"]
+  deliveryTimeDays Int
+  price            Decimal        @db.Decimal(10, 2) // Price for the package 
+  status           PackageStatus  @default(DRAFT) // for visibility 
 
   // Relations
-  collaborations Collaboration[]
-  reports        Report[]
+  collaborations        Collaboration[]
+  packageCollaborations PackageCollaboration[]
+
+  @@index([creatorId])
+}
+
+model Campaign {
+  id        String         @id @default(cuid())
+  brand     BrandProfile   @relation(fields: [brandId], references: [id])
+  brandId   String
+  name      String
+  budget    Decimal?       @db.Decimal(12, 2)
+  startDate DateTime?
+  endDate   DateTime?
+  creators  String[]
+  status    CampaignStatus @default(ACTIVE)
+
+  // Relations
+  collaborations         Collaboration[]
+  reports                Report[]
+  campaignCollaborations CampaignCollaboration[]
 
   @@index([brandId])
 }
@@ -164,21 +178,18 @@ model Campaign {
 // --- SHARED MODELS (The Core of your App) ---
 
 model Collaboration {
-  id         String         @id @default(cuid())
-  creator    CreatorProfile @relation(fields: [creatorId], references: [id])
-  creatorId  String
-  brand      BrandProfile   @relation(fields: [brandId, brandName], references: [id, username])
-  brandId    String
-  brandName  String
-  package    Package        @relation(fields: [packageId], references: [id])
-  packageId  String
-  campaign   Campaign?      @relation(fields: [campaignId], references: [id])
-  campaignId String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-
-  finalCost Decimal      @db.Decimal(10, 2) // The agreed-upon price
-  status    CollabStatus @default(PENDING)
+  id           String         @id @default(cuid())
+  creator      CreatorProfile @relation(fields: [creatorId], references: [id])
+  creatorId    String
+  brand        BrandProfile   @relation(fields: [brandId], references: [id])
+  brandId      String
+  package      Package?       @relation(fields: [packageId], references: [id])
+  packageId    String
+  packageTitle String
+  campaign     Campaign?      @relation(fields: [campaignId], references: [id])
+  campaignId   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   // Analytics reported AFTER the collab
   reportedReach      Int?
@@ -187,12 +198,39 @@ model Collaboration {
   linksToPosts       Json? // Store as [{ "platform": "instagram", "url": "..." }]
 
   // Relations
-  reports      Report[]
-  transactions Transaction[] // To link payments to this collab
+  reports                Report[]
+  transactions           Transaction[] // To link payments to this collab
+  packageCollaborations  PackageCollaboration[]
+  campaignCollaborations CampaignCollaboration[]
 
   @@index([creatorId])
   @@index([brandId])
   @@index([packageId])
+  @@index([campaignId])
+}
+
+model PackageCollaboration {
+  id        String        @id @default(cuid())
+  collabId  String        @unique
+  packageId String
+  status    PackageStatus
+  contentDraft Json?       // URL to draft content (S3/GCS) 
+  draftSubmittedAt DateTime? 
+
+  collaboration Collaboration @relation(fields: [collabId], references: [id])
+  package       Package       @relation(fields: [packageId], references: [id])
+}
+
+model CampaignCollaboration {
+  id         String @id @default(cuid())
+  collabId   String @unique
+  campaignId String
+  scope      Json
+  status     String
+
+  collaboration Collaboration @relation(fields: [collabId], references: [id])
+  campaign      Campaign      @relation(fields: [campaignId], references: [id])
+
   @@index([campaignId])
 }
 
@@ -293,6 +331,8 @@ model CreatorSocialRawSnapshot {
   rawData   Json // Full Meta API response
   fetchedAt DateTime @default(now())
 
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+
   @@index([creatorId, fetchedAt])
 }
 
@@ -324,7 +364,7 @@ model CreatorSocialAccount {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  creator User @relation(fields: [creatorId], references: [id])
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
 
   @@unique([creatorId, platform])
 }
