@@ -24,6 +24,9 @@ const BrandFeed: React.FC = () => {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestedPackageIds, setRequestedPackageIds] = useState<string[]>([]);
   const [activePackageIds, setActivePackageIds] = useState<string[]>([]);
+  const [draftedPackageIds, setDraftedPackageIds] = useState<string[]>([]);
+  const [draftedFilesMap, setDraftedFilesMap] = useState<Record<string, { fileUrls: string[]; submittedAt?: string }>>({});
+  const [selectedDraft, setSelectedDraft] = useState<{ packageId: string; fileUrls: string[]; submittedAt?: string } | null>(null);
 
   useEffect(() => {
     // derive username from path: /brand/[username]/dashboard
@@ -105,6 +108,8 @@ const BrandFeed: React.FC = () => {
             // Separate DRAFT (requested) and ACTIVE (accepted) collaborations for this creator
             const draftIds: string[] = [];
             const activeIds: string[] = [];
+            const draftedIds: string[] = [];
+            const draftedFiles: Record<string, { fileUrls: string[]; submittedAt?: string }> = {};
             collList.forEach((c: any) => {
               const cUsername = c?.creator?.username ?? c?.creatorUsername ?? c?.creator?.user?.username ?? '';
               if (cUsername !== creator.username) return;
@@ -117,10 +122,23 @@ const BrandFeed: React.FC = () => {
                 } else if (pc.status === 'ACTIVE') {
                   activeIds.push(pkgId);
                 }
+                // detect if creator uploaded draft files for this package collaboration
+                try {
+                  const hasDraftFiles = Array.isArray(pc?.contentDraft?.fileUrls) && pc.contentDraft.fileUrls.length > 0;
+                  const hasDraftSubmittedAt = !!pc?.draftSubmittedAt;
+                  if (hasDraftFiles || hasDraftSubmittedAt) {
+                    draftedIds.push(pkgId);
+                    draftedFiles[pkgId] = { fileUrls: Array.isArray(pc?.contentDraft?.fileUrls) ? pc.contentDraft.fileUrls : [], submittedAt: pc?.draftSubmittedAt };
+                  }
+                } catch (e) {
+                  // ignore
+                }
               });
             });
             setRequestedPackageIds(draftIds);
             setActivePackageIds(activeIds);
+            setDraftedPackageIds(draftedIds);
+            setDraftedFilesMap(draftedFiles);
           }
         }
       } catch (err) {
@@ -140,6 +158,9 @@ const BrandFeed: React.FC = () => {
     setCreatorPackages([]);
     setRequestedPackageIds([]);
     setActivePackageIds([]);
+    setDraftedPackageIds([]);
+    setDraftedFilesMap({});
+    setSelectedDraft(null);
   };
 
   const getBrandUsername = (): string | null => {
@@ -220,23 +241,83 @@ const BrandFeed: React.FC = () => {
                       <div className="mt-2 text-[#7b52d3] font-bold">{p.price ? (typeof p.price === 'string' ? p.price : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(p.price))) : '—'}</div>
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          {activePackageIds.includes(String(p.id ?? p.title)) && <span className="text-blue-400 text-sm">Active ✓</span>}
-                          {requestedPackageIds.includes(String(p.id ?? p.title)) && !activePackageIds.includes(String(p.id ?? p.title)) && <span className="text-green-400 text-sm">Requested ✓</span>}
+                          {draftedPackageIds.includes(String(p.id ?? p.title)) && (
+                            <span className="text-yellow-300 text-sm">Draft uploaded</span>
+                          )}
+                          {draftedPackageIds.includes(String(p.id ?? p.title)) && (draftedFilesMap[String(p.id ?? p.title)]?.fileUrls?.length > 0) && (
+                            <button
+                              onClick={() => setSelectedDraft({ packageId: String(p.id ?? p.title), fileUrls: draftedFilesMap[String(p.id ?? p.title)]?.fileUrls ?? [], submittedAt: draftedFilesMap[String(p.id ?? p.title)]?.submittedAt })}
+                              className="ml-2 px-2 py-1 bg-transparent border border-yellow-300 text-yellow-300 rounded text-xs"
+                            >
+                              View Draft
+                            </button>
+                          )}
+                          {!draftedPackageIds.includes(String(p.id ?? p.title)) && activePackageIds.includes(String(p.id ?? p.title)) && (
+                            <span className="text-blue-400 text-sm">Active ✓</span>
+                          )}
+                          {!draftedPackageIds.includes(String(p.id ?? p.title)) && requestedPackageIds.includes(String(p.id ?? p.title)) && !activePackageIds.includes(String(p.id ?? p.title)) && (
+                            <span className="text-green-400 text-sm">Requested ✓</span>
+                          )}
                           {requestError && requestError.length > 0 && <span className="text-red-400 text-sm">{requestError}</span>}
                         </div>
                         <div>
                           <button
                             onClick={() => requestPackage(p)}
-                            disabled={requestingPackageId === (p.id ?? p.title) || requestedPackageIds.includes(String(p.id ?? p.title)) || activePackageIds.includes(String(p.id ?? p.title))}
+                            disabled={
+                              requestingPackageId === (p.id ?? p.title) ||
+                              requestedPackageIds.includes(String(p.id ?? p.title)) ||
+                              activePackageIds.includes(String(p.id ?? p.title)) ||
+                              draftedPackageIds.includes(String(p.id ?? p.title))
+                            }
                             className="px-3 py-1 rounded bg-yellow-300 text-black text-sm"
                           >
-                            {requestingPackageId === (p.id ?? p.title) ? 'Requesting…' : activePackageIds.includes(String(p.id ?? p.title)) ? 'Active' : requestedPackageIds.includes(String(p.id ?? p.title)) ? 'Requested' : 'Request Package'}
+                            {requestingPackageId === (p.id ?? p.title)
+                              ? 'Requesting…'
+                              : draftedPackageIds.includes(String(p.id ?? p.title))
+                              ? 'Draft uploaded'
+                              : activePackageIds.includes(String(p.id ?? p.title))
+                              ? 'Active'
+                              : requestedPackageIds.includes(String(p.id ?? p.title))
+                              ? 'Requested'
+                              : 'Request Package'}
                           </button>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                {/* Draft viewer modal inside packages modal */}
+                {selectedDraft && (
+                  <div className="fixed inset-0 z-80 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/60" onClick={() => setSelectedDraft(null)} />
+                    <div className="relative bg-[#0b1220] rounded-2xl p-6 w-[min(700px,92%)] max-h-[80vh] overflow-y-auto border border-yellow-200">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="text-lg font-bold text-yellow-300">Draft files</div>
+                          <div className="text-sm text-gray-300">Package: {selectedDraft.packageId}</div>
+                          {selectedDraft.submittedAt && <div className="text-xs text-gray-400">Submitted: {new Date(selectedDraft.submittedAt).toLocaleString()}</div>}
+                        </div>
+                        <div>
+                          <button onClick={() => setSelectedDraft(null)} className="px-3 py-1 bg-gray-700 rounded text-white">Close</button>
+                        </div>
+                      </div>
+                      <div className="mt-4 space-y-3">
+                        {selectedDraft.fileUrls.length === 0 && <div className="text-gray-400">No files available</div>}
+                        {selectedDraft.fileUrls.map((url, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-[#111827] p-3 rounded">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gray-800 rounded flex items-center justify-center text-sm">{url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? '🖼️' : '📎'}</div>
+                              <div className="text-sm text-gray-200">File {idx + 1}</div>
+                            </div>
+                            <div>
+                              <a href={url} target="_blank" rel="noreferrer" className="text-yellow-300 font-semibold">Open</a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

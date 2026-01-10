@@ -49,16 +49,23 @@ export async function POST(req : Request) {
       },
     });
 
-    // PROFILE CREATION
+    // making of brand.
     if (userType === "BRAND") {
       await prisma.brandProfile.create({
         data: {
           userId: user.id,
           username: name,
         },
-      });
+      }),
+      await prisma.wallet.create({
+      data: {
+        userId: user.id,
+        walletType: "BRAND",
+      },
+    });
     }
 
+    // making of creator.
     if (userType === "CREATOR") {
       await prisma.creatorProfile.create({
         data: {
@@ -66,15 +73,15 @@ export async function POST(req : Request) {
           username: name,
           category: "NANO",
         },
-      });
+      }), 
+      await prisma.wallet.create({
+        data: {
+          userId: user.id,
+          walletType: "CREATOR",
+        },
+      })
     }
-
-    // WALLET
-    await prisma.wallet.create({
-      data: {
-        userId: user.id,
-      },
-    });
+    
 
     return NextResponse.json(
       { message: "Signup successful" },

@@ -26,10 +26,14 @@ interface Deal {
   packageCollaborations?: Array<{
     id: string;
     status: string;
+    draftapprovalAt?: string;
     contentDraft?: {
       fileUrls?: string[];
+      brandFeedback?: string;
     };
     draftSubmittedAt?: string;
+    publishedContentUrl?: string;
+    publishedAt?: string;
   }>;
 }
 
@@ -42,28 +46,49 @@ const Deals: React.FC<Deal> = () => {
   const [submittingId, setSubmittingId] = React.useState<string | null>(null);
   const [showSubmissionForm, setShowSubmissionForm] = React.useState(false);
   const [submissionForm, setSubmissionForm] = React.useState<{ description: string; files: File[] }>({ description: '', files: [] });
+  const [publishedInput, setPublishedInput] = React.useState<string>('');
+  const [publishingUrlForId, setPublishingUrlForId] = React.useState<string | null>(null);
+
+  // Prefill published input when a deal is selected
+  React.useEffect(() => {
+    if (!selectedDeal) {
+      setPublishedInput('');
+      return;
+    }
+    const topPublished = selectedDeal.packageCollaborations?.[0]?.publishedContentUrl;
+    const cd = selectedDeal.packageCollaborations?.[0]?.contentDraft as any;
+    const publishedUrl = topPublished || cd?.publishedUrl || '';
+    setPublishedInput(publishedUrl ?? '');
+  }, [selectedDeal]);
 
   React.useEffect(() => {
     const username = window.location.pathname.split("/")[2];
     if (!username) return;
 
+    let mounted = true
     async function fetchcalls() {
       try {
-        const res = await fetch(`/api/influencer/${username}/collaborations`);
+        const res = await fetch(`/api/influencer/${username}/collaborations`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
         const data = await res.json();
         console.log('Deals data:', data);
         const collabs = Array.isArray(data?.collaborations) ? data.collaborations : [];
-        setDeals(collabs);
+        if (mounted) setDeals(collabs);
       } catch (err) {
         console.error('Failed to fetch deals:', err);
-        setDeals([]);
+        if (mounted) setDeals([]);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
     fetchcalls();
+
+    // poll so creators see brand-side changes quickly
+    const interval = setInterval(() => fetchcalls(), 8000)
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchcalls() }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => { mounted = false; clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility) }
   }, []);
 
   if (loading) {
@@ -228,6 +253,15 @@ const Deals: React.FC<Deal> = () => {
                       Submitted: {new Date(selectedDeal.packageCollaborations[0].draftSubmittedAt).toLocaleDateString()}
                     </div>
                   )}
+                  {/* show brand feedback if present */}
+                  {(
+                    selectedDeal.packageCollaborations[0].contentDraft?.brandFeedback ||
+                    (selectedDeal as any).brandFeedback
+                  ) && (
+                      <div className="mt-3 text-sm font-semibold text-yellow-300">
+                        {selectedDeal.packageCollaborations[0].contentDraft?.brandFeedback ? `Brand: ${selectedDeal.packageCollaborations[0].contentDraft.brandFeedback}` : `Brand: ${(selectedDeal as any).brandFeedback}`}
+                      </div>
+                    )}
                 </div>
               </div>
             )}
@@ -351,7 +385,7 @@ const Deals: React.FC<Deal> = () => {
                         setSelectedDeal(null);
                         setShowSubmissionForm(false);
                         setSubmissionForm({ description: '', files: [] });
-                        
+
                         // Refresh deals list
                         const collabRes = await fetch(`/api/influencer/${encodeURIComponent(username)}/collaborations`);
                         if (collabRes.ok) {
@@ -382,14 +416,87 @@ const Deals: React.FC<Deal> = () => {
               </div>
             ) : (
               selectedDeal.status === "ACTIVE" && (
-                <button
-                  onClick={() => setShowSubmissionForm(true)}
-                  className="mt-6 px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold hover:bg-[#5a3ca0]"
-                >
-                  Submit Work
-                </button>
-              )
-            )}
+                // If brand approved the draft, show Published URL button instead of Submit Work
+                (selectedDeal.packageCollaborations?.[0]?.draftapprovalAt || (selectedDeal.packageCollaborations?.[0]?.draftapprovalAt) ? (
+                  (() => {
+                    const cd = selectedDeal.packageCollaborations?.[0]?.contentDraft as any;
+                    const topPublished = selectedDeal.packageCollaborations?.[0]?.publishedContentUrl;
+                    const publishedUrl = topPublished || cd?.publishedUrl || (Array.isArray(cd?.fileUrls) ? cd.fileUrls[0] : null);
+                    const packageCollabId = selectedDeal.packageCollaborations?.[0]?.id ?? '';
+                    return (
+                      <div className="mt-6">
+                        {publishedUrl ? (
+                          <div className="mb-3">
+                            <a href={topPublished} target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-500">
+                              View Published
+                            </a>
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={publishedInput}
+                            onChange={(e) => setPublishedInput(e.target.value)}
+                            placeholder="Paste published URL (e.g. Instagram/TikTok link)"
+                            className="w-full p-2 rounded bg-[#181c2f] text-white border border-[#7b52d3]"
+                          />
+                          <button
+                            onClick={async () => {
+                              if (!selectedDeal) return;
+                              const username = window.location.pathname.split('/')[2];
+                              if (!username) return alert('Username not found');
+                              if (!publishedInput.trim()) return alert('Please enter a URL');
+                              setPublishingUrlForId(selectedDeal.id);
+                              try {
+                                const res = await fetch(`/api/influencer/${encodeURIComponent(username)}/collaborations/${encodeURIComponent(selectedDeal.id)}/publish`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ publishedUrl: publishedInput.trim() }),
+                                });
+                                if (!res.ok) {
+                                  const d = await res.json().catch(() => ({}));
+                                  throw new Error(d?.error || res.statusText || 'Publish failed');
+                                }
+                                const data = await res.json();
+                                const updated = data?.collaboration ?? data;
+                                if (updated && updated.id) {
+                                  const usernameForFetch = encodeURIComponent(username);
+                                  const collabRes = await fetch(`/api/influencer/${usernameForFetch}/collaborations`, { cache: 'no-store' });
+                                  if (collabRes.ok) {
+                                    const collabData = await collabRes.json();
+                                    const collabs = Array.isArray(collabData?.collaborations) ? collabData.collaborations : [];
+                                    setDeals(collabs);
+                                  }
+                                }
+                                // keep input (allow edits), but update selectedDeal view
+                                // reload selected deal details by refetching deals
+                                setSelectedDeal(null);
+                              } catch (err) {
+                                console.error('Publish URL error', err);
+                                alert(String((err as any)?.message || err));
+                              } finally {
+                                setPublishingUrlForId(null);
+                              }
+                            }}
+                            disabled={publishingUrlForId === selectedDeal.id}
+                            className="px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold"
+                          >
+                            {publishingUrlForId === selectedDeal.id ? 'Saving…' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <button
+                    onClick={() => setShowSubmissionForm(true)}
+                    className="mt-6 px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold hover:bg-[#5a3ca0]"
+                  >
+                    Submit Work
+                  </button>
+                )
+                )
+              ))}
           </div>
         </div>
       )}

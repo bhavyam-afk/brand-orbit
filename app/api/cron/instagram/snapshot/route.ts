@@ -119,7 +119,7 @@ export async function POST(req: Request) {
 
             results.push({ creatorId: account.creatorId, status: "success" });
         } catch (err: any) {
-            console.error("❌ Snapshot failed for:", {
+            console.error("Snapshot failed for:", {
                 creatorId: account.creatorId,
                 igAccountId: account.igAccountId,
                 message: err?.message,
