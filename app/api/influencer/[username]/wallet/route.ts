@@ -25,15 +25,15 @@ export async function GET(
 
     const wallets = await prisma.wallet.findUnique({
       where: { userId },
-      select: { currentBalance: true, pendingBalance: true, totalEarned: true, totalWithdrawn: true, totalSpent: true, transactions: true },
+      select: { currentBalance: true, pendingBalance: true, totalEarned: true, totalSpent: true, outgoingTransactions: true, incomingTransactions: true },
     });
     return NextResponse.json({
       currentBalance: wallets?.currentBalance,
       pendingBalance: wallets?.pendingBalance,
       totalEarned: wallets?.totalEarned,
-      totalWithdrawn: wallets?.totalWithdrawn,
       totalSpent: wallets?.totalSpent,
-      transactions: wallets?.transactions || [],
+      withdrawls: wallets?.outgoingTransactions || [],
+      earnings: wallets?.incomingTransactions || [],
     }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -3,6 +3,7 @@
 // price was x when brand booked but the creator went and increased it to y handle this logic as we are adding to collab from package table only. 
 import React, { useEffect, useState } from "react";
 import { AvailabilityCalendar } from "./Calendar";
+import { PackageStatus } from "@prisma/client";
 
 type Package = {
   id: string;
@@ -14,6 +15,7 @@ type Package = {
   mediaType?: string | null;
   deliverables?: string[] | null;
   status?: string;
+  owner?: string;
 };
 
 const ListPackages: React.FC<Package> = () => {
@@ -75,10 +77,12 @@ const ListPackages: React.FC<Package> = () => {
     (async () => {
       const username = typeof window !== 'undefined' ? window.location.pathname.split('/')[2] : '';
 
-      try {
-        let hi: string = 'ACTIVE';
-        if (packages.length >= 2) {
-          hi = 'DRAFT';
+        try {
+        // decide whether new package should be ACTIVE or DRAFT based on current active packages
+        let first2: string = 'ACTIVE';
+        const activeCount = packages.filter(p => (p.status || '').toUpperCase() === 'ACTIVE').length;
+        if (activeCount >= 2) {
+          first2 = 'DRAFT';
         }
         const res = await fetch(`/api/influencer/${username}/packages`, {
           method: 'POST',
@@ -89,15 +93,31 @@ const ListPackages: React.FC<Package> = () => {
             price: form.price,
             deliveryTimeDays: form.deliveryTimeDays ? Number(form.deliveryTimeDays) : 0,
             thumbnailUrl: form.thumbnailUrl,
-            mediaType: form.mediaType,
+            mediaType: form.mediaType, 
             deliverables: form.deliverables ? form.deliverables.split(',').map(s => s.trim()) : [],
-            status: hi,
+            packagestatus: first2,
           }),
         });
         if (!res.ok) throw new Error('Failed to create package');
         const json = await res.json();
         const created = json.package;
-        setPackages(prev => [...prev, created]);
+
+        // normalize created package so frontend filters/rendering work even if backend shape changed
+        const normalized = {
+          id: created?.id ?? String(Math.random()),
+          title: created?.title ?? created?.name ?? form.title, 
+          description: created?.description ?? created?.desc ?? form.description,
+          price: created?.price ?? created?.amount ?? form.price,
+          deliveryTimeDays: created?.deliveryTimeDays || 0,
+          thumbnailUrl: created?.thumbnailUrl ?? created?.thumbnail ?? created?.thumb ?? form.thumbnailUrl ?? null,
+          mediaType: created?.mediaType ?? created?.type ?? form.mediaType ?? null,
+          deliverables: created?.deliverables ?? created?.deliverables_list ?? (form.deliverables ? form.deliverables.split(',').map(s => s.trim()) : []),
+          status: (created?.status ?? created?.packagestatus ?? created?.packageStatus ?? first2 ?? 'DRAFT') as string,
+          owner: created?.owner ?? created?.user ?? username,
+          ...created,
+        } as Package;
+
+        setPackages(prev => [...prev, normalized]);
       } catch (err) {
         console.error('create package failed', err);
       } finally {
@@ -170,7 +190,6 @@ const ListPackages: React.FC<Package> = () => {
                   </form>
                 </div>
               )}
-
 
               <div className="flex flex-row gap-6">
                 <>

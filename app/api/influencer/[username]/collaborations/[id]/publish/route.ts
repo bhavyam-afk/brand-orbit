@@ -36,8 +36,14 @@ export async function POST(
     const packageCollab = collab.packageCollaborations?.[0];
     if (!packageCollab) return NextResponse.json({ error: 'No package collaboration found' }, { status: 400 });
 
+    // ensure content has been approved before allowing publish
+    const contentStatus = String( packageCollab?.contentStatus ?? '' ).toUpperCase();
+    if (contentStatus !== 'APPROVED') {
+      return NextResponse.json({ error: 'Content has not been approved yet' }, { status: 403 });
+    }
+
     // persist published url and timestamp
-    const updatedPackageCollab = await prisma.packageCollaboration.update({
+    await prisma.packageCollaboration.update({
       where: { id: packageCollab.id },
       data: {
         publishedContentUrl: publishedUrl,

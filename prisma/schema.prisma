@@ -66,6 +66,7 @@ enum CampaignStatus {
 
 enum contentStatus {
   NOT_SUBMITTED
+  SUBMITTED
   UNDER_REVIEW
   APPROVED
   REJECTED
@@ -80,6 +81,7 @@ enum WalletType {
   CREATOR
   BRAND
 }
+
 
 // --- CORE MODELS ---
 
@@ -199,7 +201,6 @@ model Collaboration {
   creatorId    String
   brandId      String
   packageId    String
-  packageTitle String
   campaignId   String?
   collabType   CollabType
   collabstatus CollabStatus @default(PENDING)

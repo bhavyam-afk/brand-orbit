@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandProfile, CampaignCollaboration, PackageCollaboration } from "@prisma/client";
+import type { ContentDraft } from "@/types/contentDraft";
 import React from "react";
 
 const dealTabs = [
@@ -8,39 +10,31 @@ const dealTabs = [
   { key: "COMPLETED", label: "Completed Deals", icon: "🏁" },
 ] as const;
 
-type DealStatus = "ACTIVE" | "PENDING" | "COMPLETED";
+type DealStatus = "ACTIVE" | "PENDING" | "COMPLETED" | "CANCELLED";
 
 interface Deal {
   id: string;
-  brandName: string;
-  brandLogo?: string;
-  campaignName?: string;
-  packageTitle: string;
-  status: DealStatus;
+  creatorId: string;
+  brandId: string;
+  packageId: string;
+  campaignId?: string;
+  collabType: string;
+  collabstatus: DealStatus;
+  createdAt: string;
+  updatedAt: string;
+  packageCollaborations?: PackageCollaboration[];
+  campaignCollaborations?: CampaignCollaboration[];
+  brand: BrandProfile;
   package: {
     price: number;
+    title: string;
   }
-  reach?: number;
-  engagement?: number;
-  postLinks?: Record<string, string>;
-  packageCollaborations?: Array<{
-    id: string;
-    status: string;
-    draftapprovalAt?: string;
-    contentDraft?: {
-      fileUrls?: string[];
-      brandFeedback?: string;
-    };
-    draftSubmittedAt?: string;
-    publishedContentUrl?: string;
-    publishedAt?: string;
-  }>;
 }
 
 const Deals: React.FC<Deal> = () => {
+  const [deals, setDeals] = React.useState<Deal[]>([]);
   const [dealTab, setDealTab] = React.useState<DealStatus>("ACTIVE");
   const [selectedDeal, setSelectedDeal] = React.useState<Deal | null>(null);
-  const [deals, setDeals] = React.useState<Deal[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [acceptingIds, setAcceptingIds] = React.useState<string[]>([]);
   const [submittingId, setSubmittingId] = React.useState<string | null>(null);
@@ -71,9 +65,8 @@ const Deals: React.FC<Deal> = () => {
         const res = await fetch(`/api/influencer/${username}/collaborations`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
         const data = await res.json();
-        console.log('Deals data:', data);
         const collabs = Array.isArray(data?.collaborations) ? data.collaborations : [];
-        if (mounted) setDeals(collabs);
+        setDeals(collabs);
       } catch (err) {
         console.error('Failed to fetch deals:', err);
         if (mounted) setDeals([]);
@@ -83,34 +76,28 @@ const Deals: React.FC<Deal> = () => {
     }
 
     fetchcalls();
-
-    // poll so creators see brand-side changes quickly
-    const interval = setInterval(() => fetchcalls(), 8000)
-    const onVisibility = () => { if (document.visibilityState === 'visible') fetchcalls() }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => { mounted = false; clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility) }
   }, []);
 
   if (loading) {
     return <div className="text-center py-8">Loading campaigns...</div>;
   }
 
-  const filteredDeals = deals.filter(d => d.status === dealTab);
+  const filteredDeals = deals.filter(d => d.collabstatus === dealTab);
+  const activePackageCollab = selectedDeal?.packageCollaborations?.[0] ?? null;
+  const contentDraft = activePackageCollab?.contentDraft ? (activePackageCollab.contentDraft as ContentDraft) : null;
+  const draftFileUrls = contentDraft?.fileUrls ?? [];
+
   return (
     <div className="bg-[#232946] w-[75vw] text-center mx-auto mt-5 rounded-2xl shadow-lg p-8 flex flex-col gap-8">
 
       <h2 className="text-2xl text-white font-bold flex items-center gap-2">
-        <span>📣</span> Deals
+        Deals
       </h2>
 
       {/* Tabs */}
       <div className="flex gap-4">
         {dealTabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setDealTab(tab.key)}
-            className={`px-4 py-2 rounded-lg font-semibold border transition ${dealTab === tab.key ? "bg-[#7b52d3] text-white" : "bg-[#181c2f] text-[#7b52d3] border-[#7b52d3]"}`}
-          >
+          <button key={tab.key} onClick={() => setDealTab(tab.key)} className={`px-4 py-2 rounded-lg font-semibold border transition ${dealTab === tab.key ? "bg-[#7b52d3] text-white" : "bg-[#181c2f] text-[#7b52d3] border-[#7b52d3]"}`} >
             <span className="mr-2">{tab.icon}</span>
             {tab.label}
           </button>
@@ -123,54 +110,33 @@ const Deals: React.FC<Deal> = () => {
           <div className="text-gray-400">No deals found.</div>
         )}
 
-        {deals.map(deal => (dealTab === deal.status &&
-          <div
-            key={deal.id}
-            className="bg-[#181c2f] rounded-xl p-6 shadow border border-[#7b52d3] flex flex-col gap-3"
-          >
+        {deals.map(deal => (dealTab === deal.collabstatus &&
+          <div key={deal.id} className="bg-[#181c2f] rounded-xl p-6 shadow border border-[#7b52d3] flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              {deal.brandLogo && (
-                <img
-                  src={deal.brandLogo}
-                  alt={deal.brandName}
-                  className="w-10 h-10 rounded-full border-2 border-[#7b52d3] object-cover"
-                />
+              {deal.brand.logoUrl && (
+                <img src={deal.brand.logoUrl} alt={deal.brand.username} className="w-10 h-10 rounded-full border-2 border-[#7b52d3] object-cover" />
               )}
-              <span className="font-bold text-lg">{deal.brandName}</span>
+              <span className="font-bold text-lg">{deal.brand.username}</span>
             </div>
 
             <div className="font-semibold text-[#7b52d3]">
-              {deal.packageTitle}
+              {deal.package.title}
             </div>
 
             <div className="text-sm text-gray-400">
-              Status: <span className="text-white font-bold">{deal.status}</span>
+              Status: <span className="text-white font-bold">{deal.collabstatus}</span>
             </div>
 
             <div className="text-sm text-gray-400">
               Cost: <span className="text-white font-bold">₹{Number(deal.package.price ?? 0).toLocaleString()}</span>
             </div>
 
-            {deal.reach && (
-              <div className="text-sm text-gray-400">
-                Reach: <span className="text-white">{deal.reach.toLocaleString()}</span>
-              </div>
-            )}
-
-            {deal.engagement && (
-              <div className="text-sm text-gray-400">
-                Engagement: <span className="text-white">{deal.engagement}%</span>
-              </div>
-            )}
             <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => setSelectedDeal(deal)}
-                className="px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold hover:bg-[#5a3ca0]"
-              >
+              <button onClick={() => { setSelectedDeal(deal); setShowSubmissionForm(true); }} className="px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold hover:bg-[#5a3ca0]">
                 View Details
               </button>
 
-              {deal.status === 'PENDING' && (
+              {deal.collabstatus === 'PENDING' && (
                 <button
                   onClick={async () => {
                     const username = window.location.pathname.split('/')[2];
@@ -208,64 +174,61 @@ const Deals: React.FC<Deal> = () => {
       {selectedDeal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-[#232946] rounded-2xl p-8 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
-            <button
-              className="absolute top-4 right-4 text-white text-xl"
+            <button className="absolute top-4 right-4 text-white text-xl"
               onClick={() => { setSelectedDeal(null); setShowSubmissionForm(false); setSubmissionForm({ description: '', files: [] }); }}
             >
               &times;
             </button>
 
             <h3 className="text-2xl font-bold mb-4">
-              {selectedDeal.brandName}
+              {selectedDeal.brand.username}
             </h3>
 
             <div className="text-[#7b52d3] font-semibold text-lg mb-2">
-              {selectedDeal.packageTitle}
+              {selectedDeal.package.title}
             </div>
 
             <div className="text-sm text-gray-400">
-              Status: <span className="text-white">{selectedDeal.status}</span>
+              Status: <span className="text-white">{selectedDeal.collabstatus}</span>
             </div>
 
             <div className="text-sm text-gray-400">
               Cost: <span className="text-white font-bold">₹{Number(selectedDeal.package.price ?? 0).toLocaleString()}</span>
             </div>
 
-            {selectedDeal.packageCollaborations?.[0]?.contentDraft?.fileUrls && (
+            {draftFileUrls.length > 0 && (
               <div className="mt-6 p-4 bg-[#181c2f] rounded-lg border border-[#7b52d3]">
-                <h5 className="text-sm font-semibold text-[#7b52d3] mb-3">✅ Draft Submitted</h5>
+                <h5 className="text-sm font-semibold text-[#7b52d3] mb-3">
+                  ✅ Draft Submitted
+                </h5>
+
                 <div className="space-y-2">
-                  {selectedDeal.packageCollaborations[0].contentDraft.fileUrls.map((url, idx) => (
-                    <div key={idx} className="text-sm text-gray-300 flex items-center justify-between">
+                  {draftFileUrls.map((url, idx) => (
+                    <div key={idx} className="text-sm text-gray-300 flex items-center justify-between" >
                       <span>📎 Uploaded File {idx + 1}</span>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#7b52d3] hover:text-[#a78bfa] text-xs font-bold"
-                      >
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#7b52d3] hover:text-[#a78bfa] text-xs font-bold" >
                         View
                       </a>
                     </div>
                   ))}
-                  {selectedDeal.packageCollaborations[0].draftSubmittedAt && (
+
+                  {activePackageCollab?.draftSubmittedAt && (
                     <div className="text-xs text-gray-400 mt-3">
-                      Submitted: {new Date(selectedDeal.packageCollaborations[0].draftSubmittedAt).toLocaleDateString()}
+                      Submitted:{" "}
+                      {new Date(activePackageCollab.draftSubmittedAt).toLocaleDateString()}
                     </div>
                   )}
-                  {/* show brand feedback if present */}
-                  {(
-                    selectedDeal.packageCollaborations[0].contentDraft?.brandFeedback ||
-                    (selectedDeal as any).brandFeedback
-                  ) && (
-                      <div className="mt-3 text-sm font-semibold text-yellow-300">
-                        {selectedDeal.packageCollaborations[0].contentDraft?.brandFeedback ? `Brand: ${selectedDeal.packageCollaborations[0].contentDraft.brandFeedback}` : `Brand: ${(selectedDeal as any).brandFeedback}`}
-                      </div>
-                    )}
+
+                  {activePackageCollab?.brandFeedback && (
+                    <div className="mt-3 text-sm font-semibold text-yellow-300">
+                      Brand: {activePackageCollab.brandFeedback}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
-            {selectedDeal.status === "ACTIVE" && showSubmissionForm ? (
+
+            {selectedDeal.collabstatus === "ACTIVE" && showSubmissionForm ? (
               // Submission form
               <div className="mt-6 space-y-4">
                 <h4 className="text-lg font-bold text-white">Submit Your Work</h4>
@@ -296,9 +259,7 @@ const Deals: React.FC<Deal> = () => {
                         {submissionForm.files.map((file, idx) => (
                           <div key={idx} className="text-sm text-gray-300 flex items-center justify-between">
                             <span>📎 {file.name}</span>
-                            <button
-                              onClick={() => setSubmissionForm(prev => ({ ...prev, files: prev.files.filter((_, i) => i !== idx) }))}
-                              className="text-red-500 hover:text-red-400 text-xs"
+                            <button onClick={() => setSubmissionForm(prev => ({ ...prev, files: prev.files.filter((_, i) => i !== idx) }))} className="text-red-500 hover:text-red-400 text-xs"
                             >
                               Remove
                             </button>
@@ -312,117 +273,105 @@ const Deals: React.FC<Deal> = () => {
                 </div>
 
                 <div className="flex gap-2 pt-4">
-                  <input
-                    type="file"
-                    id={`file-input-${selectedDeal.id}`}
-                    multiple
-                    onChange={(e) => setSubmissionForm(prev => ({ ...prev, files: [...prev.files, ...Array.from(e.target.files || [])] }))}
+                  <input type="file" id={`file-input-${selectedDeal.id}`} multiple onChange={(e) => setSubmissionForm(prev => ({ ...prev, files: [...prev.files, ...Array.from(e.target.files || [])] }))}
                     className="hidden"
                     accept="image/*,video/*,.pdf,.doc,.docx"
                   />
-                  <button
-                    onClick={() => document.getElementById(`file-input-${selectedDeal.id}`)?.click()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-500"
-                  >
+                  <button onClick={() => document.getElementById(`file-input-${selectedDeal.id}`)?.click()} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-500">
                     📁 Upload File
                   </button>
 
-                  <button
-                    onClick={async () => {
-                      if (!selectedDeal) return;
-                      const username = window.location.pathname.split('/')[2];
-                      if (!username) return;
+                  <button onClick={async () => {
+                    if (!selectedDeal) return;
+                    const username = window.location.pathname.split('/')[2];
+                    if (!username) return;
 
-                      setSubmittingId(selectedDeal.id);
-                      try {
-                        const uploadedFileUrls: string[] = [];
+                    setSubmittingId(selectedDeal.id);
+                    try {
+                      const uploadedFileUrls: string[] = [];
 
-                        // Step 1: Upload each file directly to backend (which uploads to S3)
-                        for (const file of submissionForm.files) {
-                          try {
-                            const uploadFormData = new FormData();
-                            uploadFormData.append('collabId', selectedDeal.id);
-                            uploadFormData.append('file', file);
+                      // Step 1: Upload each file directly to backend (which uploads to S3)
+                      for (const file of submissionForm.files) {
+                        try {
+                          const uploadFormData = new FormData();
+                          uploadFormData.append('collabId', selectedDeal.id);
+                          uploadFormData.append('file', file);
 
-                            const uploadRes = await fetch('/api/uploads/creatordraft', {
-                              method: 'POST',
-                              body: uploadFormData,
-                            });
+                          const uploadRes = await fetch('/api/uploads/creatordraft', {
+                            method: 'POST',
+                            body: uploadFormData,
+                          });
 
-                            if (!uploadRes.ok) {
-                              const errorData = await uploadRes.json();
-                              console.error("Upload error response:", errorData);
-                              throw new Error(`File upload failed: ${errorData.error || uploadRes.statusText}`);
-                            }
-
-                            const { fileUrl } = await uploadRes.json();
-                            uploadedFileUrls.push(fileUrl);
-                          } catch (fileErr) {
-                            console.error(`Error uploading file ${file.name}:`, fileErr);
-                            throw fileErr;
+                          if (!uploadRes.ok) {
+                            const errorData = await uploadRes.json();
+                            console.error("Upload error response:", errorData);
+                            throw new Error(`File upload failed: ${errorData.error || uploadRes.statusText}`);
                           }
+
+                          const { fileUrl } = await uploadRes.json();
+                          uploadedFileUrls.push(fileUrl);
+                        } catch (fileErr) {
+                          console.error(`Error uploading file ${file.name}:`, fileErr);
+                          throw fileErr;
                         }
-
-                        // Step 2: Submit collaboration with uploaded file URLs
-                        const submissionData = {
-                          description: submissionForm.description,
-                          fileUrls: uploadedFileUrls,
-                        };
-
-                        const res = await fetch(`/api/influencer/${encodeURIComponent(username)}/collaborations/${selectedDeal.id}/submit`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(submissionData),
-                        });
-
-                        if (!res.ok) {
-                          const d = await res.json();
-                          throw new Error(d?.error || res.statusText || 'Submission failed');
-                        }
-
-                        const data = await res.json();
-                        console.log('Submission successful:', data);
-                        setSelectedDeal(null);
-                        setShowSubmissionForm(false);
-                        setSubmissionForm({ description: '', files: [] });
-
-                        // Refresh deals list
-                        const collabRes = await fetch(`/api/influencer/${encodeURIComponent(username)}/collaborations`);
-                        if (collabRes.ok) {
-                          const collabData = await collabRes.json();
-                          const collabs = Array.isArray(collabData?.collaborations) ? collabData.collaborations : [];
-                          setDeals(collabs);
-                        }
-                      } catch (err) {
-                        console.error('Submit error', err);
-                        alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-                      } finally {
-                        setSubmittingId(null);
                       }
-                    }}
+
+                      // Step 2: Submit collaboration with uploaded file URLs
+                      const submissionData = {
+                        fileUrls: uploadedFileUrls,
+                        description: submissionForm.description,
+                      };
+
+                      const res = await fetch(`/api/influencer/${encodeURIComponent(username)}/collaborations/${selectedDeal.id}/submit`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(submissionData),
+                      });
+
+                      if (!res.ok) {
+                        const d = await res.json();
+                        throw new Error(d?.error || res.statusText || 'Submission failed');
+                      }
+
+                      const data = await res.json();
+                      console.log('Submission successful:', data);
+                      setSelectedDeal(null);
+                      setShowSubmissionForm(false);
+                      setSubmissionForm({ description: '', files: [] });
+
+                      // Refresh deals list
+                      const collabRes = await fetch(`/api/influencer/${encodeURIComponent(username)}/collaborations`);
+                      if (collabRes.ok) {
+                        const collabData = await collabRes.json();
+                        const collabs = Array.isArray(collabData?.collaborations) ? collabData.collaborations : [];
+                        setDeals(collabs);
+                      }
+                    } catch (err) {
+                      console.error('Submit error', err);
+                      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                    } finally {
+                      setSubmittingId(null);
+                    }
+                  }}
                     disabled={submittingId === selectedDeal?.id || !submissionForm.description.trim() || submissionForm.files.length === 0}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-500 disabled:opacity-50"
                   >
                     {submittingId === selectedDeal?.id ? 'Submitting…' : 'Submit Work'}
                   </button>
 
-                  <button
-                    onClick={() => { setShowSubmissionForm(false); setSubmissionForm({ description: '', files: [] }); }}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-500"
-                  >
+                  <button onClick={() => { setShowSubmissionForm(false); setSubmissionForm({ description: '', files: [] }); }} className="px-4 py-2 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-500">
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
-              selectedDeal.status === "ACTIVE" && (
+              selectedDeal.collabstatus === "ACTIVE" && (
                 // If brand approved the draft, show Published URL button instead of Submit Work
                 (selectedDeal.packageCollaborations?.[0]?.draftapprovalAt || (selectedDeal.packageCollaborations?.[0]?.draftapprovalAt) ? (
                   (() => {
                     const cd = selectedDeal.packageCollaborations?.[0]?.contentDraft as any;
-                    const topPublished = selectedDeal.packageCollaborations?.[0]?.publishedContentUrl;
+                    const topPublished = selectedDeal.packageCollaborations?.[0]?.publishedContentUrl || '';
                     const publishedUrl = topPublished || cd?.publishedUrl || (Array.isArray(cd?.fileUrls) ? cd.fileUrls[0] : null);
-                    const packageCollabId = selectedDeal.packageCollaborations?.[0]?.id ?? '';
                     return (
                       <div className="mt-6">
                         {publishedUrl ? (
@@ -487,14 +436,7 @@ const Deals: React.FC<Deal> = () => {
                       </div>
                     )
                   })()
-                ) : (
-                  <button
-                    onClick={() => setShowSubmissionForm(true)}
-                    className="mt-6 px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold hover:bg-[#5a3ca0]"
-                  >
-                    Submit Work
-                  </button>
-                )
+                ) : (null)
                 )
               ))}
           </div>

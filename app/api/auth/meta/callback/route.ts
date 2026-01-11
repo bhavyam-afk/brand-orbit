@@ -20,12 +20,10 @@ export async function GET(req: NextRequest) {
   // ─────────────────────────────────────────────
   // 1️⃣ Parse & validate state
   // ─────────────────────────────────────────────
-  let creatorId: string;
   let username: string;
 
   try {
     const parsed = JSON.parse(decodeURIComponent(state));
-    creatorId = parsed.creatorId;
     username = parsed.username;
   } catch {
     return NextResponse.json({ error: "Invalid state payload" }, { status: 400 });
@@ -87,18 +85,31 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // 🔒 Always fetch creator from DB (never trust OAuth state)
+const creator = await prisma.creatorProfile.findUnique({
+  where: { username },
+});
+
+if (!creator) {
+  return NextResponse.json(
+    { error: "Creator profile does not exist" },
+    { status: 400 }
+  );
+}
+
+
   // ─────────────────────────────────────────────
   // 5️⃣ Store connection (UPSERT)
   // ─────────────────────────────────────────────
   await prisma.creatorSocialAccount.upsert({
   where: {
     creatorId_platform: {
-      creatorId: creatorId,
+      creatorId: creator.id,
       platform: "INSTAGRAM",
     },
   },
   create: {
-    creatorId: creatorId,
+    creatorId: creator.id,
     platform: "INSTAGRAM",
     accessToken: page.access_token,
     igAccountId: page.instagram_business_account.id,
@@ -119,6 +130,6 @@ export async function GET(req: NextRequest) {
   // 6️⃣ Redirect to dashboard
   // ─────────────────────────────────────────────
   return NextResponse.redirect(
-    `${process.env.NEXT_PUBLIC_APP_URL}/influencer/${encodeURIComponent(username)}/dashboard?meta=connected`
+    `${process.env.NEXT_PUBLIC_APP_URL}/creator/${encodeURIComponent(username)}/dashboard?meta=connected`
   );
 }

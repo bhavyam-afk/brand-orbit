@@ -24,18 +24,18 @@ export async function GET(
     if (!influencer) {
       return NextResponse.json({ error: "Influencer not found" }, { status: 404 });
     }
-
+ 
     const pkgs = influencer.packages.map((p) => ({
       id: p.id,
       title: p.title,
       description: p.description,
-      // serialize Decimal safely
       price: typeof p.price === 'object' && p.price?.toString ? p.price.toString() : String(p.price ?? ''),
       deliveryTimeDays: p.deliveryTimeDays,
       thumbnailUrl: p.thumbnailUrl,
       mediaType: p.mediaType,
       deliverables: p.deliverables,
-      status: p.status,
+      status: p.packagestatus,
+      owner: influencer.username,
     }));
 
     return NextResponse.json({ packages: pkgs }, { status: 200 });
@@ -45,14 +45,13 @@ export async function GET(
 }
 
 
-
 export async function POST(
   req: Request,
   { params }: { params: { username: string | string[] | Promise<string> | Promise<string[]> } }
 ) {
   try {
     const body = await req.json();
-    const { title, description, price, deliveryTimeDays, thumbnailUrl, mediaType, deliverables, status } = body;
+    const { title, description, price, deliveryTimeDays, thumbnailUrl, mediaType, deliverables, packagestatus } = body;
 
     const resolvedParams: any = await params;
     let usernameRaw: unknown = resolvedParams?.username;
@@ -75,7 +74,7 @@ export async function POST(
     let pkg;
     try {
       pkg = await prisma.package.create({
-        data: {
+        data: { 
           creatorId: creator.id,
           title: String(title),
           description: description ? String(description) : null,
@@ -85,7 +84,7 @@ export async function POST(
           mediaType: mediaType ? String(mediaType) : 'Other',
           deliverables: Array.isArray(deliverables) ? deliverables : deliverables ? String(deliverables).split(',').map((s) => s.trim()) : [],
           // Allow client to request initial status (e.g., ACTIVE or DRAFT). Prisma will use default if omitted.
-          ...(status ? { status: String(status).toUpperCase() as any } : {}),
+          ...(packagestatus ? { packagestatus: String(packagestatus).toUpperCase() as any } : {}),
         },
       });
     } catch (dbErr) {
@@ -102,7 +101,8 @@ export async function POST(
       thumbnailUrl: pkg.thumbnailUrl,
       mediaType: pkg.mediaType,
       deliverables: pkg.deliverables,
-      status: pkg.status,
+      packagestatus: pkg.packagestatus,
+      owner: usernameRaw,
     };
 
     return NextResponse.json({ package: out }, { status: 201 });

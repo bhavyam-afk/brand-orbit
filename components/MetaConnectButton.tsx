@@ -4,8 +4,10 @@ import React, { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 
 export default function MetaConnectButton() {
+  const username = window.location.pathname.split("/")[2];
+
   const { data: session, status } = useSession();
-  const [connected, setConnected] = useState<boolean | null>(null);
+  const [connected, setConnected] = useState<Boolean | null>(null);
 
   useEffect(() => {
     // Only check DB when user is authenticated
@@ -13,7 +15,7 @@ export default function MetaConnectButton() {
 
     const fetchStatus = async () => {
       try {
-        const res = await fetch(`/api/influencer2/${session?.user?.username}/creator-social-account`);
+        const res = await fetch(`/api/influencer/${username}/creator-social-account`);
         if (!res.ok) {
           setConnected(false);
           return;

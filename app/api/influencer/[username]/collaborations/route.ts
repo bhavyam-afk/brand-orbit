@@ -19,9 +19,12 @@ export async function GET(
             package: {
               select: {
                 price: true,
+                title:true,
               }
             },
             packageCollaborations: true,
+            campaignCollaborations: true,
+            brand: true,
           },
         }
       }
@@ -31,26 +34,8 @@ export async function GET(
       return NextResponse.json({ error: "Influencer not found" }, { status: 404 });
     }
 
-    // Map collaborations to use PackageCollaboration status for UI
-    const enrichedCollabs = creator.collaborations.map(collab => {
-      const pkgCollabStatus = collab.packageCollaborations[0]?.status || 'UNKNOWN';
-      // Map PackageStatus to DealStatus
-      let dealStatus: string;
-      if (pkgCollabStatus === 'DRAFT') {
-        dealStatus = 'PENDING'; // Brand requested, creator hasn't accepted yet
-      } else if (pkgCollabStatus === 'ACTIVE') {
-        dealStatus = 'ACTIVE'; // Creator accepted, deal is active
-      } else {
-        dealStatus = 'COMPLETED'; // DELETED or other states
-      }
-      return {
-        ...collab,
-        status: dealStatus,
-      };
-    });
-
     return NextResponse.json(
-      { collaborations: enrichedCollabs},
+      { collaborations: creator.collaborations},
       { status: 200 }
     );
   } catch (error) {

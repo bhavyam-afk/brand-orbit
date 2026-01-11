@@ -24,13 +24,13 @@ export async function PATCH(
     const creator = await prisma.creatorProfile.findUnique({ where: { username }, select: { id: true } });
     if (!creator) return NextResponse.json({ error: "Creator not found" }, { status: 404 });
 
-    const pkg = await prisma.package.findUnique({ where: { id }, select: {id: true, creatorId: true, status: true } });
+    const pkg = await prisma.package.findUnique({ where: { id }, select: {id: true, creatorId: true, packagestatus: true } });
     if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
     if (pkg.creatorId !== creator.id) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
     // Enforce maximum 2 active packages per creator when activating a draft
-    if (newStatus === "ACTIVE" && pkg.status !== "ACTIVE") {
-      const activeCount = await prisma.package.count({ where: { creatorId: creator.id, status: "ACTIVE" } });
+    if (newStatus === "ACTIVE" && pkg.packagestatus !== "ACTIVE") {
+      const activeCount = await prisma.package.count({ where: { creatorId: creator.id, packagestatus: "ACTIVE" } });
       if (activeCount >= 2) {
         return NextResponse.json({ error: "Maximum 2 active packages allowed" }, { status: 400 });
       }
@@ -38,7 +38,7 @@ export async function PATCH(
 
     const updated = await prisma.package.update({
       where: { id },
-      data: { status: newStatus as any },
+      data: { packagestatus: newStatus as any },
     });
 
     const out = {
@@ -50,7 +50,7 @@ export async function PATCH(
       thumbnailUrl: updated.thumbnailUrl,
       mediaType: updated.mediaType,
       deliverables: updated.deliverables,
-      status: updated.status,
+      status: updated.packagestatus,
     };
 
     return NextResponse.json({ package: out }, { status: 200 });

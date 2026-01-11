@@ -8,9 +8,6 @@ export async function POST(request: Request, { params }: { params: { username: s
     // find creator by username
     const creator = await prisma.creatorProfile.findUnique({
       where: { username },
-      include: {
-        collaborations: true,
-      }
     });
 
     if (!creator) return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
@@ -25,20 +22,19 @@ export async function POST(request: Request, { params }: { params: { username: s
     if (!collab) return NextResponse.json({ error: 'Collaboration not found' }, { status: 404 });
     if (collab.creatorId !== creator.id) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
 
-    // Check if PackageCollaboration is in DRAFT state (pending)
+    // Only SUBMITTED collaborations can be accepted.
     const pkgCollab = collab.packageCollaborations[0];
-    if (!pkgCollab || pkgCollab.status !== 'DRAFT') {
+    if (!pkgCollab || pkgCollab.contentStatus !== 'SUBMITTED') {
       return NextResponse.json({ error: 'Collaboration not in pending state', collaboration: collab }, { status: 400 });
     }
 
-    // Update both Collaboration and PackageCollaboration to ACTIVE
     const updated = await prisma.collaboration.update({ 
       where: { id }, 
       data: {
         packageCollaborations: {
           update: {
             where: { id: pkgCollab.id },
-            data: { status: 'ACTIVE' },
+            data: { contentStatus: 'APPROVED' },
           },
         },
       },

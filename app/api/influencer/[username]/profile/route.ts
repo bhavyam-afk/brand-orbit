@@ -17,17 +17,21 @@ export async function GET(
   const profile = await prisma.creatorProfile.findUnique({
     where: { username },
     include: {
-      transaction: true,
       collaborations: {
         include: {
           brand: true,
           package: true,
           campaign: true,
-          packageCollaborations: { include: { package: true } },
-          campaignCollaborations: { include: { campaign: true } },
-          transactions: true,
+          packageCollaborations: true,
+          campaignCollaborations: true,
         },
       },
+      wallet: {
+        select: {
+          incomingTransactions: true,
+          outgoingTransactions: true,
+        },
+      }
     },
   });
 
@@ -49,10 +53,10 @@ export async function GET(
     category: profile.category,
     platformLinks: profile.platformLinks || {},
     rating: profile.mlScore,
-    transactions: profile.transaction || [],
     collaborations: profile.collaborations || [],
+    incomingTransactions: profile.wallet?.incomingTransactions || [],
+    outgoingTransactions: profile.wallet?.outgoingTransactions || [],
   };
 
   return NextResponse.json(response, { status: 200 });
-
 }

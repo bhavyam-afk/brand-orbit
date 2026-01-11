@@ -45,7 +45,6 @@ export async function POST(req: Request, { params }: { params: { username: strin
   try {
     const { username } = await params;
     const body = await req.json();
-    console.log('availability POST body:', body);
     const { date, status, reason } = body;
 
     if (!date || !status) {

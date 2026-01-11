@@ -3,6 +3,7 @@
 import React from "react";
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
+import { Transaction } from "@prisma/client";
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface ProfileData {
@@ -15,8 +16,9 @@ interface ProfileData {
   category: string | null;
   platformLinks: any | null;
   rating: number | 0;
-  transactions?: any[];
   collaborations?: any[];
+  incomingTransactions?: Transaction[];
+  outgoingTransactions?: Transaction[];
 }
 
 const Profile: React.FC = () => {
@@ -36,7 +38,6 @@ const Profile: React.FC = () => {
         const res = await fetch(`/api/influencer/${username}/profile`);
         if (!res.ok) throw new Error(`Failed to fetch profile (${res.status})`);
         const profileData = await res.json().catch(() => ({}));
-        // debug: log the raw profile payload to inspect collaborations shape
         console.debug('profileData (raw)', profileData);
         setData(profileData as ProfileData);
 
@@ -89,21 +90,57 @@ const Profile: React.FC = () => {
         }
         setEarningsMonths(months);
 
-        // sum of each month's completed payouts
-        const transactions = Array.isArray(profileData?.transactions) ? profileData.transactions : [];
-        const totals = months.map((m) => {
-          return transactions.reduce((acc: number, t: any) => {
-            const dateStr = t?.updatedAt || t?.createdAt;
-            if (!dateStr) return acc;
-            const tMonth = new Date(dateStr).toLocaleString('default', { month: 'short' });
+        // log raw incoming transactions and normalize them so we handle backend changes
+        const rawTx = Array.isArray(profileData?.incomingTransactions)
+          ? profileData.incomingTransactions
+          : (Array.isArray(profileData?.incomingtransactions) ? profileData.incomingtransactions : []);
+        console.debug('raw incoming transactions', rawTx);
 
-            if (String(t?.type ?? '').toUpperCase() === 'PAYOUT' && String(t?.status ?? '').toUpperCase() === 'COMPLETED' && tMonth === m) {
-              const amt = Number(t.amount) || 0;
-              return acc + amt;
+        const extractAmount = (tx: any) => {
+          const candidates = [
+            tx?.amount,
+            tx?.value,
+            tx?.data?.amount,
+            tx?.attributes?.amount,
+            tx?.meta?.amount,
+            tx?.payload?.amount,
+            tx?.transaction?.amount,
+          ];
+          for (const v of candidates) {
+            if (v === null || v === undefined || v === '') continue;
+            if (typeof v === 'number') return v;
+            if (typeof v === 'string') {
+              const parsed = Number(String(v).replace(/[^0-9.-]+/g, ''));
+              if (!isNaN(parsed)) return parsed;
             }
-            return acc;
-          }, 0);
+          }
+          return 0;
+        };
+
+        const extractDate = (tx: any) => new Date(tx?.updatedAt || tx?.createdAt || tx?.timestamp || tx?.recordedAt || tx?.date || Date.now());
+        const extractType = (tx: any) => String(tx?.type ?? tx?.transactionType ?? tx?.kind ?? '').toUpperCase();
+        const extractStatus = (tx: any) => String(tx?.status ?? tx?.state ?? '').toUpperCase();
+
+        const normalised = rawTx.map((tx: any) => {
+          const date = extractDate(tx);
+          return {
+            date,
+            month: date.toLocaleString('default', { month: 'short' }),
+            type: extractType(tx),
+            status: extractStatus(tx),
+            amount: extractAmount(tx),
+            raw: tx,
+          };
         });
+        console.debug('normalized transactions (sample)', normalised.slice(0, 20));
+
+        const totals = months.map((m) =>
+          normalised.reduce((acc: number, tx: any) => {
+            if (tx.type === 'PAYOUT' && tx.status === 'COMPLETED' && tx.month === m) return acc + (tx.amount || 0);
+            return acc;
+          }, 0)
+        );
+
         setEarningsTotals(totals);
 
         // followers snapshots
@@ -262,9 +299,9 @@ const Profile: React.FC = () => {
                 >
                   {/* Thumbnail */}
                   <div className="w-14 h-14 rounded-full overflow-hidden mb-2 border-2 border-cyan-400">
-                    {c.thumbnailUrl ? (
+                    {c.brand?.logoUrl ? (
                       <img
-                        src={c.thumbnailUrl}
+                        src={c.brand?.logoUrl}
                         alt="collab"
                         className="w-full h-full object-cover"
                       />
@@ -275,7 +312,7 @@ const Profile: React.FC = () => {
 
                   {/* Display title (package title or campaign name) */}
                   <div className="font-bold text-cyan-700 text-sm mb-1 text-center">
-                    @{c.title || 'unknown'}
+                    @{c.brand?.username}
                   </div>
 
                   {/* Date */}

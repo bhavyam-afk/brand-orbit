@@ -10,7 +10,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
     if (!creator) return NextResponse.json({ error: 'Creator not found' }, { status: 404 });
 
     const collabs = await prisma.collaboration.findMany({
-      where: { creatorId: creator.id, status: 'PENDING' },
+      where: { creatorId: creator.id, collabstatus: 'PENDING' },
       include: {
         brand: true,
         package: true,
@@ -21,12 +21,10 @@ export async function GET(_req: Request, { params }: { params: { username: strin
     const requests = collabs.map((c) => ({
       id: c.id,
       brand: c.brand ? { id: c.brand.id, username: c.brand.username, logoUrl: c.brand.logoUrl } : null,
-      brandName: c.brand?.username ?? null,
       packageId: c.packageId,
       packageTitle: c.package?.title ?? null,
-      amount: c.finalCost ? String(c.finalCost) : null,
-      status: c.status,
-      // placeholders in case frontend expects these
+      amount: c.package?.price ?? null,
+      status: c.collabstatus,
       message: null,
       note: null,
       createdAt: c.id ? undefined : undefined,

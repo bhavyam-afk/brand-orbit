@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
+import { ContentDraft } from "@/types/contentDraft";
 
 export async function POST(
   req: Request,
@@ -94,10 +95,11 @@ export async function POST(
     }
 
     // Update the PackageCollaboration with draft content
-    const updatedPackageCollab = await prisma.packageCollaboration.update({
+    await prisma.packageCollaboration.update({
       where: { id: packageCollab.id },
       data: {
-        contentDraft: contentDraft as any,
+        contentStatus: 'SUBMITTED',
+        contentDraft: contentDraft as ContentDraft,
         draftSubmittedAt: new Date(),
       },
     });

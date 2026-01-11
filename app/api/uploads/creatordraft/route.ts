@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid collaboration" }, { status: 403 });
     }
 
-    if (packageCollab.status !== "ACTIVE") {
-      console.error("Collaboration not active. Status:", packageCollab.status);
+    if (collab.collabstatus !== "ACTIVE") {
+      console.error("Collaboration not active. Status:", collab.collabstatus);
       return NextResponse.json({ error: "Collaboration is not active" }, { status: 403 });
     }
 
