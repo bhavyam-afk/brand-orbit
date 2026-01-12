@@ -11,7 +11,7 @@ const razorpay = new Razorpay({
 
 export async function POST(
   req: Request,
-  { params }: { params: { collabId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     // 1️⃣ Auth
@@ -20,11 +20,11 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const collabId = params.collabId;
+    const { id } = await params;
 
     // 2️⃣ Fetch collaboration
     const collab = await prisma.collaboration.findUnique({
-      where: { id: collabId },
+      where: { id },
       include: {
         brand: true,
         packageCollaborations: {
@@ -48,10 +48,7 @@ export async function POST(
     }
 
     // 4️⃣ Business rule
-    if (
-      pkgCollab.contentStatus !== "APPROVED" ||
-      !pkgCollab.publishedAt
-    ) {
+    if ( pkgCollab.contentStatus !== "APPROVED" || !pkgCollab.publishedAt ) {
       return NextResponse.json(
         { error: "Content not eligible for payment" },
         { status: 400 }
@@ -65,9 +62,9 @@ export async function POST(
     const order = await razorpay.orders.create({
       amount,
       currency: "INR",
-      receipt: `collab_${collabId}`,
+      receipt: `collab_${id}`,
       notes: {
-        collabId,
+        id,
         packageCollabId: pkgCollab.id,
       },
     });

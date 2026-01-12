@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 
 export async function POST(request: Request, { params }: { params: { username: string; id: string } }) {
   try {
-    const { username, id } = params
+    const { username, id } = await params
     const body = await request.json().catch(() => ({}))
     const message = String(body?.message ?? '')
 
@@ -20,8 +20,6 @@ export async function POST(request: Request, { params }: { params: { username: s
     const newContent = { ...(typeof prevContent === 'object' ? prevContent : {}), brandFeedback: message }
 
     if (!existing) return NextResponse.json({ error: 'PackageCollaboration not found' }, { status: 404 })
-    console.log('request-improvements: found packageCollab', { id: existing.id, collabId: existing.collabId, draftSubmittedAt: existing.draftSubmittedAt })
-    console.log('request-improvements: newContent', newContent)
     // If already under review with same feedback, return existing (idempotent)
     if ((existing as any).contentStatus === 'UNDER_REVIEW' && (existing as any).brandFeedback === message) {
       const updatedExisting = await prisma.collaboration.findUnique({ where: { id }, include: { packageCollaborations: true, creator: true, package: true, brand: true } })

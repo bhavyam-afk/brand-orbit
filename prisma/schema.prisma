@@ -63,7 +63,7 @@ enum CampaignStatus {
   COMPLETED
   CANCELLED
 }
-
+ 
 enum contentStatus {
   NOT_SUBMITTED
   SUBMITTED

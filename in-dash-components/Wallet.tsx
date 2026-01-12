@@ -26,7 +26,7 @@ interface WalletData {
 }
 
 
-const Wallet: React.FC<WalletData> = () => {
+const Wallet = () => {
   const [data, setData] = React.useState<WalletData | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [earnings, setEarnings] = React.useState<{ month: string; amount: number }[]>([]);

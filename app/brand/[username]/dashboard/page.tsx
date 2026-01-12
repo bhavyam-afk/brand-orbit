@@ -6,6 +6,7 @@ import Settings from "@/br-dash-components/Settings";
 import Analytics from "@/br-dash-components/Analytics";
 import Wallet from "@/br-dash-components/Wallet";
 import Deals from "@/br-dash-components/Deals";
+import { signOut } from "next-auth/react";
 
 const sidebarOptions = [
   { key: "profile", label: "Profile" },
@@ -33,6 +34,14 @@ const BrandDashboard = () => {
             {opt.label}
           </button>
         ))}
+        <div className="mt-auto">
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="w-full text-left px-4 py-3 rounded-lg font-semibold text-lg transition-colors mb-1 bg-red-500 text-white hover:bg-red-600"
+          >
+            Logout
+          </button>
+        </div>
       </aside>
       {/* Main content */}
       <main className="flex-1 p-10">

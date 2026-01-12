@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 
 export async function POST(request: Request, { params }: { params: { username: string; id: string } }) {
   try {
-    const { username, id } = params
+    const { username, id } = await params
 
     const brand = await prisma.brandProfile.findFirst({ where: { username } })
     if (!brand) return NextResponse.json({ error: 'Brand not found' }, { status: 404 })
@@ -18,8 +18,6 @@ export async function POST(request: Request, { params }: { params: { username: s
     const newContent = { ...(typeof prevContent === 'object' ? prevContent : {}), brandFeedback: 'Approved' }
 
     if (!existing) return NextResponse.json({ error: 'PackageCollaboration not found' }, { status: 404 })
-    console.log('approve: found packageCollab', { id: existing.id, collabId: existing.collabId, draftSubmittedAt: existing.draftSubmittedAt })
-    console.log('approve: newContent', newContent)
     // If already approved, return existing state (idempotent)
     if ((existing as any).contentStatus === 'APPROVED' || (existing as any).draftapprovalAt) {
       const updatedExisting = await prisma.collaboration.findUnique({ where: { id }, include: { packageCollaborations: true, creator: true, package: true, brand: true } })
@@ -32,7 +30,7 @@ export async function POST(request: Request, { params }: { params: { username: s
       const updateData: any = {
         contentDraft: approvedContent,
         contentStatus: 'APPROVED',
-        brandFeedback: 'Approved',
+        brandFeedback: 'Approved. You will be paid after your content stays live for 3 days.',
         draftapprovalAt: new Date(),
       }
       await prisma.packageCollaboration.update({ where: { id: existing.id }, data: updateData })

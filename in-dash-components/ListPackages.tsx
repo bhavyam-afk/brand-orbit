@@ -18,7 +18,7 @@ type Package = {
   owner?: string;
 };
 
-const ListPackages: React.FC<Package> = () => {
+const ListPackages = () => {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

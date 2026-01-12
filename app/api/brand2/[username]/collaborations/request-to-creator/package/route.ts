@@ -9,7 +9,13 @@ export async function POST(request: Request, { params }: { params: { username: s
       return NextResponse.json({ error: 'creatorUsername and packageId are required' }, { status: 400 });
     }
 
-    const brand = await prisma.brandProfile.findFirst({ where: { username: params.username } });
+    const { username } = await params;
+    if (!username) {
+      console.error('Missing route param: username', { params });
+      return NextResponse.json({ error: 'Missing route param: username' }, { status: 400 });
+    }
+
+    const brand = await prisma.brandProfile.findUnique({ where: { username } });
     if (!brand) return NextResponse.json({ error: 'Brand not found' }, { status: 404 });
 
     const creator = await prisma.creatorProfile.findUnique({ where: { username: creatorUsername } });
@@ -22,46 +28,25 @@ export async function POST(request: Request, { params }: { params: { username: s
     if (pkg.creatorId !== creator.id) {
       return NextResponse.json({ error: 'Package does not belong to the specified creator' }, { status: 400 });
     }
-
-    // Avoid duplicate pending collaborations for the same brand/creator/package
-    const existing = await prisma.collaboration.findFirst({
-      where: {
-        creatorId: creator.id,
-        brandId: brand.id,
-        packageId: pkg.id,
-      },
-      include: {
-        packageCollaborations: true,
-      },
-    });
-
-    // Check if existing collab has an active/draft PackageCollaboration
-    if (existing) {
-      const activePkgCollab = existing.packageCollaborations.find(
-        (pc: any) => pc.status === 'ACTIVE' || pc.status === 'DRAFT'
-      );
-      if (activePkgCollab) {
-        return NextResponse.json({ success: true, collaboration: existing, alreadyExists: true });
-      }
-    }
-
+    
     // Create Collaboration with PackageCollaboration entry
     const collab = await prisma.collaboration.create({
       data: {
         creatorId: creator.id,
         brandId: brand.id,
         packageId: pkg.id,
-        packageTitle: pkg.title,
-        // Create PackageCollaboration with DRAFT status (pending creator acceptance)
+        collabstatus: 'PENDING',
+        collabType: 'PACKAGE',
         packageCollaborations: {
           create: {
             packageId: pkg.id,
-            status: 'DRAFT',
           },
         },
       },
       include: {
         packageCollaborations: true,
+        creator: true,
+        brand: true,
       },
     });
 

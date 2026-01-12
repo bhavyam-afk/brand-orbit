@@ -88,61 +88,13 @@ const BrandFeed: React.FC = () => {
     setModalOpen(true);
     setPkgsLoading(true);
     try {
-      const username = encodeURIComponent(creator.username);
-      const res = await fetch(`/api/influencer/${username}/packages`);
+      const brandUsername = getBrandUsername();
+      const res = await fetch(`/api/brand2/${brandUsername}/feed/package?creatorId=${creator.id}`); 
       if (!res.ok) {
         setCreatorPackages([]);
       } else {
         const data = await res.json().catch(() => ({}));
-        const list = data.packages ?? data ?? [];
-        setCreatorPackages(Array.isArray(list) ? list : []);
-      }
-      // Fetch existing pending collaborations for this brand -> mark requested packages
-      try {
-        const brandUsername = getBrandUsername();
-        if (brandUsername) {
-          const collRes = await fetch(`/api/brand2/${encodeURIComponent(brandUsername)}/collaborations`);
-          if (collRes.ok) {
-            const collData = await collRes.json().catch(() => ({}));
-            const collList = Array.isArray(collData) ? collData : Array.isArray(collData?.collaborations) ? collData.collaborations : [];
-            // Separate DRAFT (requested) and ACTIVE (accepted) collaborations for this creator
-            const draftIds: string[] = [];
-            const activeIds: string[] = [];
-            const draftedIds: string[] = [];
-            const draftedFiles: Record<string, { fileUrls: string[]; submittedAt?: string }> = {};
-            collList.forEach((c: any) => {
-              const cUsername = c?.creator?.username ?? c?.creatorUsername ?? c?.creator?.user?.username ?? '';
-              if (cUsername !== creator.username) return;
-              const pkgCollabs = Array.isArray(c?.packageCollaborations) ? c.packageCollaborations : [];
-              pkgCollabs.forEach((pc: any) => {
-                const pkgId = String(c?.packageId ?? c?.package?.id ?? '');
-                if (!pkgId) return;
-                if (pc.status === 'DRAFT') {
-                  draftIds.push(pkgId);
-                } else if (pc.status === 'ACTIVE') {
-                  activeIds.push(pkgId);
-                }
-                // detect if creator uploaded draft files for this package collaboration
-                try {
-                  const hasDraftFiles = Array.isArray(pc?.contentDraft?.fileUrls) && pc.contentDraft.fileUrls.length > 0;
-                  const hasDraftSubmittedAt = !!pc?.draftSubmittedAt;
-                  if (hasDraftFiles || hasDraftSubmittedAt) {
-                    draftedIds.push(pkgId);
-                    draftedFiles[pkgId] = { fileUrls: Array.isArray(pc?.contentDraft?.fileUrls) ? pc.contentDraft.fileUrls : [], submittedAt: pc?.draftSubmittedAt };
-                  }
-                } catch (e) {
-                  // ignore
-                }
-              });
-            });
-            setRequestedPackageIds(draftIds);
-            setActivePackageIds(activeIds);
-            setDraftedPackageIds(draftedIds);
-            setDraftedFilesMap(draftedFiles);
-          }
-        }
-      } catch (err) {
-        console.warn('Could not fetch brand collaborations', err);
+        setCreatorPackages(Array.isArray(data?.packages) ? data.packages : []);
       }
     } catch (err) {
       console.error('Failed to load packages', err);
@@ -187,7 +139,7 @@ const BrandFeed: React.FC = () => {
     }
     setRequestingPackageId(pkg.id ?? pkg.title ?? '');
     try {
-      const res = await fetch(`/api/brand2/${encodeURIComponent(brandUsername)}/request-package`, {
+      const res = await fetch(`/api/brand2/${encodeURIComponent(brandUsername)}/collaborations/request-to-creator/package`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ creatorUsername: creator.username, packageId: pkg.id }),
@@ -197,7 +149,6 @@ const BrandFeed: React.FC = () => {
         throw new Error(data?.error || res.statusText || 'Request failed');
       }
       const data = await res.json().catch(() => ({}));
-      // determine package id returned from collaboration (or fallback to pkg.id)
       const collab = data?.collaboration ?? data?.collaboration ?? data;
       const returnedPkgId = String(collab?.package?.id ?? collab?.packageId ?? pkg.id ?? pkg.title ?? '');
       setRequestedPackageIds((prev) => {

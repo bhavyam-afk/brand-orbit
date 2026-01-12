@@ -3,228 +3,265 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
-async function hashPassword(password: string) {
-  const saltRounds = 10;
-  return bcrypt.hash(password, saltRounds);
+async function hash(password: string) {
+  return bcrypt.hash(password, 10);
 }
 
 async function main() {
-  console.log("🌱 Seeding database with hashed passwords...");
+  console.log("🌱 Seeding database...");
 
-  // ---------- PASSWORDS ----------
-  const creatorPassword = "creator123";
-  const brandPassword = "brand123";
-
-  const creatorHash = await hashPassword(creatorPassword);
-  const brandHash = await hashPassword(brandPassword);
-
-  // ---------- USERS ----------
-  const creator1 = await prisma.user.create({
+  // ─────────────────────────────
+  // USERS
+  // ─────────────────────────────
+  const creatorUser1 = await prisma.user.create({
     data: {
       email: "creator1@test.com",
-      username: "creator1",
-      passwordHash: creatorHash,
+      username: "creator_one",
+      passwordHash: await hash("creator123"),
       userType: "CREATOR",
     },
   });
 
-  const creator2 = await prisma.user.create({
+  const creatorUser2 = await prisma.user.create({
     data: {
       email: "creator2@test.com",
-      username: "creator2",
-      passwordHash: creatorHash,
+      username: "creator_two",
+      passwordHash: await hash("creator123"),
       userType: "CREATOR",
     },
   });
 
-  const brand1 = await prisma.user.create({
+  const brandUser1 = await prisma.user.create({
     data: {
       email: "brand1@test.com",
-      username: "brand1",
-      passwordHash: brandHash,
+      username: "brand_one",
+      passwordHash: await hash("brand123"),
       userType: "BRAND",
     },
   });
 
-  const brand2 = await prisma.user.create({
+  const brandUser2 = await prisma.user.create({
     data: {
       email: "brand2@test.com",
-      username: "brand2",
-      passwordHash: brandHash,
+      username: "brand_two",
+      passwordHash: await hash("brand123"),
       userType: "BRAND",
     },
   });
 
-  const users = [creator1, creator2, brand1, brand2];
-
-  // ---------- WALLETS ----------
-  const wallets = await Promise.all(
-    users.map(user =>
-      prisma.wallet.create({
-        data: {
-          userId: user.id,
-          walletType: user.userType === "CREATOR" ? "CREATOR" : "BRAND",
-          currentBalance: user.userType === "BRAND" ? 50000 : 0,
-          pendingBalance: 0,
-        },
-      })
-    )
-  );
-
-  // ---------- CREATOR PROFILES ----------
-  const creators = await Promise.all(
-    [creator1, creator2].map((user, i) =>
-      prisma.creatorProfile.create({
-        data: {
-          userId: user.id,
-          username: user.username,
-          category: i === 0 ? "NANO" : "MACRO",
-          nicheTags: ["tech", "fitness"],
-          walletId: wallets.find(w => w.userId === user.id)!.id,
-        },
-      })
-    )
-  );
-
-  // ---------- BRAND PROFILES ----------
-  const brands = await Promise.all(
-    [brand1, brand2].map(user =>
-      prisma.brandProfile.create({
-        data: {
-          userId: user.id,
-          username: user.username,
-          industryTags: ["saas", "ecommerce"],
-          walletId: wallets.find(w => w.userId === user.id)!.id,
-        },
-      })
-    )
-  );
-
-  // ---------- PACKAGES ----------
-  const packages = await Promise.all(
-    creators.map(creator =>
-      prisma.package.create({
-        data: {
-          creatorId: creator.id,
-          title: "Instagram Reel Promo",
-          mediaType: "Instagram Reel",
-          deliverables: ["1 Reel", "1 Story"],
-          deliveryTimeDays: 7,
-          price: 5000,
-          packagestatus: "ACTIVE",
-        },
-      })
-    )
-  );
-
-  // ---------- CAMPAIGNS ----------
-  const campaigns = await Promise.all(
-    brands.map(brand =>
-      prisma.campaign.create({
-        data: {
-          brandId: brand.id,
-          name: "Launch Campaign",
-          budget: 30000,
-          creators: [],
-          campaignstatus: "ACTIVE",
-        },
-      })
-    )
-  );
-
-  // ---------- COLLABORATIONS ----------
-  const collabs = [];
-
-  // Package collabs
-  for (let i = 0; i < creators.length; i++) {
-    collabs.push(
-      await prisma.collaboration.create({
-        data: {
-          creatorId: creators[i].id,
-          brandId: brands[i % brands.length].id,
-          packageId: packages[i].id,
-          packageTitle: packages[i].title,
-          collabType: "PACKAGE",
-          collabstatus: i % 2 === 0 ? "ACTIVE" : "COMPLETED",
-        },
-      })
-    );
-  }
-
-  // Campaign collab
-  collabs.push(
-    await prisma.collaboration.create({
-      data: {
-        creatorId: creators[0].id,
-        brandId: brands[0].id,
-        packageId: packages[0].id,
-        packageTitle: packages[0].title,
-        campaignId: campaigns[0].id,
-        collabType: "CAMPAIGN",
-        collabstatus: "ACTIVE",
-      },
-    })
-  );
-
-  // ---------- PACKAGE COLLABORATIONS ----------
-  for (const collab of collabs.filter(c => c.collabType === "PACKAGE")) {
-    await prisma.packageCollaboration.create({
-      data: {
-        collabId: collab.id,
-        packageId: collab.packageId,
-        contentStatus: "APPROVED",
-        contentDraft: { files: ["draft.mp4"] },
-        draftSubmittedAt: new Date(),
-        publishedContentUrl: "https://instagram.com/p/demo",
-        publishedAt: new Date(),
-      },
-    });
-  }
-
-  // ---------- CAMPAIGN COLLABORATION ----------
-  await prisma.campaignCollaboration.create({
+  // ─────────────────────────────
+  // WALLETS
+  // ─────────────────────────────
+  const creatorWallet1 = await prisma.wallet.create({
     data: {
-      collabId: collabs.find(c => c.collabType === "CAMPAIGN")!.id,
-      campaignId: campaigns[0].id,
-      scope: { reels: 2, stories: 3 },
-      contentStatus: "UNDER_REVIEW",
+      userId: creatorUser1.id,
+      walletType: "CREATOR",
+      currentBalance: 5000,
+      totalEarned: 5000,
     },
   });
 
-  // ---------- TRANSACTIONS ----------
-  for (const collab of collabs) {
-    const brandWallet = wallets.find(w => w.walletType === "BRAND")!;
-    const creatorWallet = wallets.find(w => w.walletType === "CREATOR")!;
+  const creatorWallet2 = await prisma.wallet.create({
+    data: {
+      userId: creatorUser2.id,
+      walletType: "CREATOR",
+    },
+  });
 
-    await prisma.transaction.create({
-      data: {
-        fromWalletId: brandWallet.id,
-        toWalletId: creatorWallet.id,
+  const brandWallet1 = await prisma.wallet.create({
+    data: {
+      userId: brandUser1.id,
+      walletType: "BRAND",
+      currentBalance: 20000,
+      totalSpent: 10000,
+    },
+  });
+
+  const brandWallet2 = await prisma.wallet.create({
+    data: {
+      userId: brandUser2.id,
+      walletType: "BRAND",
+      currentBalance: 15000,
+    },
+  });
+
+  // ─────────────────────────────
+  // PROFILES
+  // ─────────────────────────────
+  const creator1 = await prisma.creatorProfile.create({
+    data: {
+      userId: creatorUser1.id,
+      username: "creator_one",
+      bio: "Tech & Startup Creator",
+      niche: "Technology",
+      nicheTags: ["tech", "ai", "saas"],
+      category: "MICRO",
+      follower_count: 45000,
+      walletId: creatorWallet1.id,
+    },
+  });
+
+  const creator2 = await prisma.creatorProfile.create({
+    data: {
+      userId: creatorUser2.id,
+      username: "creator_two",
+      bio: "Lifestyle & Fitness Creator",
+      niche: "Fitness",
+      nicheTags: ["fitness", "health"],
+      category: "NANO",
+      follower_count: 8000,
+      walletId: creatorWallet2.id,
+    },
+  });
+
+  const brand1 = await prisma.brandProfile.create({
+    data: {
+      userId: brandUser1.id,
+      username: "brand_one",
+      bio: "AI SaaS Company",
+      industryTags: ["saas", "ai"],
+      walletId: brandWallet1.id,
+    },
+  });
+
+  const brand2 = await prisma.brandProfile.create({
+    data: {
+      userId: brandUser2.id,
+      username: "brand_two",
+      bio: "Fitness Brand",
+      industryTags: ["fitness"],
+      walletId: brandWallet2.id,
+    },
+  });
+
+  // ─────────────────────────────
+  // PACKAGES
+  // ─────────────────────────────
+  const techPackage = await prisma.package.create({
+    data: {
+      creatorId: creator1.id,
+      title: "Instagram Reel Promotion",
+      description: "1 Reel + Story",
+      mediaType: "Instagram Reel",
+      deliverables: ["1 Reel", "1 Story"],
+      deliveryTimeDays: 5,
+      price: 5000,
+      packagestatus: "ACTIVE",
+    },
+  });
+
+  const fitnessPackage = await prisma.package.create({
+    data: {
+      creatorId: creator2.id,
+      title: "Workout Video Shoutout",
+      description: "YouTube Shorts mention",
+      mediaType: "YouTube Shorts",
+      deliverables: ["1 Short"],
+      deliveryTimeDays: 7,
+      price: 3000,
+      packagestatus: "ACTIVE",
+    },
+  });
+
+  // ─────────────────────────────
+  // COLLABORATIONS
+  // ─────────────────────────────
+  const collab1 = await prisma.collaboration.create({
+    data: {
+      creatorId: creator1.id,
+      brandId: brand1.id,
+      packageId: techPackage.id,
+      collabType: "PACKAGE",
+      collabstatus: "ACTIVE",
+    },
+  });
+
+  const collab2 = await prisma.collaboration.create({
+    data: {
+      creatorId: creator2.id,
+      brandId: brand2.id,
+      packageId: fitnessPackage.id,
+      collabType: "PACKAGE",
+      collabstatus: "COMPLETED",
+    },
+  });
+
+  // ─────────────────────────────
+  // PACKAGE COLLABORATIONS
+  // ─────────────────────────────
+  await prisma.packageCollaboration.create({
+    data: {
+      collabId: collab1.id,
+      packageId: techPackage.id,
+      contentStatus: "SUBMITTED",
+      contentDraft: {
+        fileUrls: [
+          "https://cdn.test.com/drafts/tech_reel.mp4",
+        ],
+      },
+      draftSubmittedAt: new Date(),
+    },
+  });
+
+  await prisma.packageCollaboration.create({
+    data: {
+      collabId: collab2.id,
+      packageId: fitnessPackage.id,
+      contentStatus: "APPROVED",
+      contentDraft: {
+        fileUrls: [
+          "https://cdn.test.com/drafts/fitness_short.mp4",
+        ],
+      },
+      draftSubmittedAt: new Date(),
+      draftapprovalAt: new Date(),
+      publishedContentUrl: "https://instagram.com/p/test",
+      publishedAt: new Date(),
+    },
+  });
+
+  // ─────────────────────────────
+  // TRANSACTIONS
+  // ─────────────────────────────
+  await prisma.transaction.createMany({
+    data: [
+      {
+        fromWalletId: brandWallet1.id,
+        toWalletId: creatorWallet1.id,
         amount: 5000,
         type: "PAYMENT",
-        status: collab.collabstatus === "COMPLETED" ? "COMPLETED" : "PENDING",
-        collabId: collab.id,
+        status: "COMPLETED",
+        collabId: collab1.id,
       },
-    });
-
-    await prisma.transaction.create({
-      data: {
-        fromWalletId: creatorWallet.id,
-        toWalletId: brandWallet.id,
+      {
+        fromWalletId: creatorWallet1.id,
+        toWalletId: brandWallet1.id,
         amount: 500,
         type: "FEE",
         status: "COMPLETED",
-        collabId: collab.id,
       },
-    });
-  }
+    ],
+  });
 
-  console.log("✅ Seed completed with bcrypt-hashed passwords");
+  // ─────────────────────────────
+  // SOCIAL ACCOUNT
+  // ─────────────────────────────
+  await prisma.creatorSocialAccount.create({
+    data: {
+      creatorId: creator1.id,
+      platform: "INSTAGRAM",
+      accessToken: "test_long_lived_token",
+      igAccountId: "123456789",
+      connected: true,
+    },
+  });
+
+  console.log("✅ Seed completed successfully");
 }
 
 main()
-  .catch(err => {
-    console.error(err);
+  .catch((e) => {
+    console.error("❌ Seed failed", e);
     process.exit(1);
   })
   .finally(async () => {

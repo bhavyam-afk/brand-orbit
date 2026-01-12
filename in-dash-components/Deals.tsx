@@ -31,7 +31,7 @@ interface Deal {
   }
 }
 
-const Deals: React.FC<Deal> = () => {
+const Deals = () => {
   const [deals, setDeals] = React.useState<Deal[]>([]);
   const [dealTab, setDealTab] = React.useState<DealStatus>("ACTIVE");
   const [selectedDeal, setSelectedDeal] = React.useState<Deal | null>(null);

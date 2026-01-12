@@ -1,10 +1,12 @@
 "use client";
-
+import { usePathname } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 
 export default function MetaConnectButton() {
-  const username = window.location.pathname.split("/")[2];
+
+  const pathname = usePathname();
+  const username = pathname.split("/")[2];
 
   const { data: session, status } = useSession();
   const [connected, setConnected] = useState<Boolean | null>(null);
