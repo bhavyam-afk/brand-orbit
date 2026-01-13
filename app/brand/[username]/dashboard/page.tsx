@@ -1,11 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import Profile from "@/br-dash-components/Profile"; 
-import BrandFeed from "@/br-dash-components/BrandFeed";
-import Settings from "@/br-dash-components/Settings";
-import Analytics from "@/br-dash-components/Analytics";
-import Wallet from "@/br-dash-components/Wallet";
-import Deals from "@/br-dash-components/Deals";
+import Profile from "@/components/br-dash-components/Profile"; 
+import BrandFeed from "@/components/br-dash-components/BrandFeed";
+import Settings from "@/components/br-dash-components/Settings";
+import Analytics from "@/components/br-dash-components/Analytics";
+import Wallet from "@/components/br-dash-components/Wallet";
+import Deals from "@/components/br-dash-components/Deals";
 import { signOut } from "next-auth/react";
 
 const sidebarOptions = [

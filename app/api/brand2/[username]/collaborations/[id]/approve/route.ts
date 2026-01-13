@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: { params: { username: s
       const updateData: any = {
         contentDraft: approvedContent,
         contentStatus: 'APPROVED',
-        brandFeedback: 'Approved. You will be paid after your content stays live for 3 days.',
+        brandFeedback: 'Approved. Brand must Pay now if not been done yet.',
         draftapprovalAt: new Date(),
       }
       await prisma.packageCollaboration.update({ where: { id: existing.id }, data: updateData })

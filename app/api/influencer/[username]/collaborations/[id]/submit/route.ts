@@ -80,7 +80,7 @@ export async function POST(
       );
     }
 
-    // Update collaboration with draft submission
+    // Update packageCollaboration with draft submission
     const contentDraft = {
       fileUrls,
     };

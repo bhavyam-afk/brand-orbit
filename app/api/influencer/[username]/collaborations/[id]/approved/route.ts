@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: { params: { username: s
     // Only SUBMITTED collaborations can be accepted.
     const pkgCollab = collab.packageCollaborations[0];
     if (!pkgCollab || pkgCollab.contentStatus !== 'SUBMITTED') {
-      return NextResponse.json({ error: 'Collaboration not in pending state', collaboration: collab }, { status: 400 });
+      return NextResponse.json({ error: 'No Content has been sent yet.', collaboration: collab }, { status: 400 });
     }
 
     const updated = await prisma.collaboration.update({ 
@@ -37,7 +37,7 @@ export async function POST(request: Request, { params }: { params: { username: s
             data: { contentStatus: 'APPROVED' },
           },
         },
-      },
+      }, 
       include: {
         packageCollaborations: true,
       },

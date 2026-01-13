@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { openRazorpayCheckout } from '@/components/OpenRazorPayCheckOut';
+import { ContentDraft } from "@/types/contentDraft";
 import {
   BrandProfile,
   Campaign,
@@ -12,7 +14,6 @@ import {
   Package,
   PackageCollaboration,
 } from "@prisma/client";
-import { ContentDraft } from "@/types/contentDraft";
 
 type Collab = {
   id: string;
@@ -253,11 +254,16 @@ const Deals = () => {
                             );
                           }
                           const data = await res.json().catch(() => ({}));
-                          // downstream: user will implement Razorpay flow using response
-                          alert(
-                            data?.message ??
-                            "Payment initiation request sent — implement Razorpay flow"
-                          );
+                          // expected response should include order id, amount and currency
+                          const orderId = data?.orderId || data?.order_id || data?.id || data?.razorpay_order_id;
+                          const amount = Number(data?.amount ?? data?.amount_in_paise ?? data?.amountInPaise ?? data?.value ?? 0);
+                          const currency = data?.currency || data?.Currency || 'INR';
+
+                          if (orderId && amount) {
+                            await openRazorpayCheckout({ orderId, amount, currency, collabId: id });
+                          } else {
+                            alert(data?.message ?? 'Payment initiation succeeded — server did not return order info');
+                          }
                         } catch (err) {
                           console.error("Pay error", err);
                           alert(String((err as any)?.message || err));

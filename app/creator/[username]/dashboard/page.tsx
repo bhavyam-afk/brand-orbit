@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Profile from "@/in-dash-components/Profile";
-import ListPackages from "@/in-dash-components/ListPackages";
-import AnalyticsDashboard from "@/in-dash-components/AnalyticsDashboard";
-import Deals from "@/in-dash-components/Deals";
-import Wallet from "@/in-dash-components/Wallet";
-import Settings from "@/in-dash-components/Settings";
+import Profile from "@/components/in-dash-components/Profile";
+import ListPackages from "@/components/in-dash-components/ListPackages";
+import AnalyticsDashboard from "@/components/in-dash-components/AnalyticsDashboard";
+import Deals from "@/components/in-dash-components/Deals";
+import Wallet from "@/components/in-dash-components/Wallet";
+import Settings from "@/components/in-dash-components/Settings";
 // import Feed from "@/in-dash-components/Feed";
 import MetaConnectButton from "@/components/MetaConnectButton";
 import { signOut } from "next-auth/react";

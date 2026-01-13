@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
         brand: true,
         package: true,
       },
-      orderBy: { /* newest first */ id: 'desc' },
+      orderBy: { id: 'desc' },
     });
 
     const requests = collabs.map((c) => ({
