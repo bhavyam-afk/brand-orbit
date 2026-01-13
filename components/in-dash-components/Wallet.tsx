@@ -3,7 +3,6 @@
 import React from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { set } from 'mongoose';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -22,23 +21,25 @@ interface WalletData {
   totalEarned: number;
   totalWithdrawn: number;
   totalSpent: number;
-  transactions: Transaction[];
+  withdrawls?: Transaction[];
+  earnings?: Transaction[];
 }
-
 
 const Wallet = () => {
   const [data, setData] = React.useState<WalletData | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [earnings, setEarnings] = React.useState<{ month: string; amount: number }[]>([]);
+  const [earningsinmonths, setEarnings] = React.useState<{ month: string; amount: number }[]>([]);
   const [earningmonths, setEarningmonths] = React.useState<string[]>([]);
+  const [open, setOpen] = React.useState(false);
+  const [withdrawing, setWithdrawing] = React.useState(false);
 
-  React.useEffect(() => {
+  // Define the fetch logic here so it can be reused
+  const fetchWalletData = React.useCallback(async () => {
     const username = typeof window !== 'undefined' ? window.location.pathname.split('/')[2] : '';
     if (!username) return;
 
-    async function fetchcalls() {
-
-      setLoading(true);
+    setLoading(true);
+    try {
       const res = await fetch(`/api/influencer/${username}/wallet`);
       const walletData = await res.json();
 
@@ -49,12 +50,19 @@ const Wallet = () => {
         totalEarned: Number(walletData.totalEarned ?? 0),
         totalWithdrawn: Number(walletData.totalWithdrawn ?? 0),
         totalSpent: Number(walletData.totalSpent ?? 0),
-        transactions: Array.isArray(walletData.transactions) ? walletData.transactions.map((t: any) => ({
-          id: String(t.id ?? t._id ?? ''),
+        withdrawls: Array.isArray(walletData.withdrawls) ? walletData.withdrawls.map((t: any) => ({
+          id: String(t.id ?? ''),
           amount: Number(t.amount ?? 0),
-          type: t.type ?? t.transactionType ?? '',
-          status: t.status ?? t.state ?? '',
-          createdAt: t.createdAt ?? t.date ?? '',
+          type: t.type ?? '',
+          status: t.status ?? '',
+          createdAt: t.createdAt ?? '',
+        })) : [],
+        earnings: Array.isArray(walletData.earnings) ? walletData.earnings.map((t: any) => ({
+          id: String(t.id ?? ''),
+          amount: Number(t.amount ?? 0),
+          type: t.type ?? '',
+          status: t.status ?? '',
+          createdAt: t.createdAt ?? '',
         })) : [],
       } as WalletData;
 
@@ -71,21 +79,18 @@ const Wallet = () => {
       }
       setEarningmonths(months);
 
-      // Compute earnings per month from transactions (fallback when backend doesn't provide `earnings`)
-      const txs = normalized.transactions || [];
+      // Compute earnings per month from transactions
       const earningsPerMonth = months.map((mon, idx) => {
-        // month index relative to now: i from 4..0 -> months[0] is oldest
         const d = new Date();
         d.setDate(1);
         d.setMonth(d.getMonth() - (4 - idx));
         const year = d.getFullYear();
         const month = d.getMonth();
 
-        const sum = txs.reduce((acc, t) => {
+        const sum = normalized.earnings?.reduce((acc, t) => {
           const tDate = new Date(t.createdAt || t.date || '');
           if (tDate.getFullYear() === year && tDate.getMonth() === month) {
             const amt = Number(t.amount ?? 0);
-            // consider deposits/payments as earnings (positive amounts)
             return acc + (amt > 0 ? amt : 0);
           }
           return acc;
@@ -93,20 +98,28 @@ const Wallet = () => {
         return { month: mon, amount: sum };
       });
 
-      setEarnings(earningsPerMonth);
-
+      setEarnings((earningsPerMonth as Array<{ month: string; amount: number }>) || months.map(m => ({ month: m, amount: 0 })));
+    } catch (error) {
+      console.error("Failed to fetch wallet data", error);
+    } finally {
       setLoading(false);
-    };
-
-    fetchcalls();
-
+    }
   }, []);
+
+  // Initial load
+  React.useEffect(() => {
+    fetchWalletData();
+  }, [fetchWalletData]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'INR',
     }).format(amount);
   };
+
+  const alltransactions = data ? ([...(data.withdrawls || []), ...(data.earnings || [])]) : [];
+  const canWithdraw = data ? data.currentBalance > 0 ? true : false : false;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -115,6 +128,34 @@ const Wallet = () => {
       day: 'numeric',
     });
   };
+
+  const handleWithdraw = async () => {
+    try {
+      setWithdrawing(true);
+
+      const res = await fetch("/api/influencer/wallet/withdraw", {
+        method: "POST",
+      });
+
+      // Renamed to responseData to avoid conflict with state 'data'
+      const responseData = await res.json();
+
+      if (!res.ok) {
+        throw new Error(responseData?.error || "Withdraw failed");
+      }
+
+      alert("Withdrawal initiated successfully");
+      setOpen(false);
+
+      // Refresh wallet data - Now this works because fetchWalletData is in scope
+      await fetchWalletData();
+    } catch (err: any) {
+      alert(err.message || "Withdraw failed");
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
 
   if (loading) {
     return <div className="text-center py-8">Loading wallet...</div>;
@@ -129,7 +170,7 @@ const Wallet = () => {
     datasets: [
       {
         label: "Earnings (₹)",
-        data: earnings.map(e => e.amount),
+        data: earningsinmonths.map(e => e.amount),
         backgroundColor: "rgba(34,211,238,0.9)",
         borderColor: "#0891b2",
         borderWidth: 1,
@@ -140,7 +181,7 @@ const Wallet = () => {
       },
     ],
   };
-   const earningsOptions = {
+  const earningsOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -180,7 +221,7 @@ const Wallet = () => {
             <div className="bg-white/5 p-4 rounded-lg">
               <p className="text-gray-400">Total Earnings</p>
               <p className="text-2xl font-bold text-[#7b52d3]">
-                {formatCurrency(Number((earnings || []).reduce((s, x) => s + Number(x.amount || 0), 0)))}
+                {formatCurrency(Number((earningsinmonths || []).reduce((s, x) => s + Number(x.amount || 0), 0)))}
               </p>
             </div>
             <div className="bg-white/5 p-4 rounded-lg">
@@ -212,18 +253,55 @@ const Wallet = () => {
             </div>
           </div>
           <div className="mt-4">
-            <button className="px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold shadow hover:bg-[#5a3ca0]">
+            <button className="px-4 py-2 bg-[#7b52d3] text-white rounded-lg font-bold shadow hover:bg-[#5a3ca0] disabled:bg-gray-500"
+              disabled={!canWithdraw}
+              onClick={() => {
+                setOpen(true);
+              }}
+            >
               Withdraw Funds
             </button>
           </div>
         </div>
+
+        {open && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#232946] rounded-xl p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold mb-2 text-white">Withdraw Funds</h3>
+
+              <p className="text-gray-300 mb-4">
+                Available balance:{" "}
+                <span className="font-bold">
+                  {formatCurrency(Number(data?.currentBalance))}
+                </span>
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleWithdraw}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold"
+                >
+                  Confirm Withdraw
+                </button>
+
+                <button
+                  onClick={() => setOpen(false)}
+                  className="flex-1 bg-gray-600 text-white py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Bottom Section - Transactions */}
       <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
         <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Recent Transactions</h2>
         <div className="space-y-4">
-          {(data?.transactions || []).map((transaction) => (
+          {(alltransactions || []).map((transaction) => (
             <div
               key={transaction.id}
               className="bg-white/5 p-4 rounded-lg flex justify-between items-center"
@@ -241,7 +319,7 @@ const Wallet = () => {
                   {formatCurrency(Number(transaction.amount))}
                 </span>
                 <span className={`px-2 py-1 rounded-full text-xs ${transaction.status === 'COMPLETED' ? 'bg-green-500/20 text-green-500'
-                  : transaction.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500' }`}> 
+                  : transaction.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500'}`}>
                   {transaction.status ? (transaction.status.charAt(0) + transaction.status.slice(1).toLowerCase()) : ''}
                 </span>
               </div>
@@ -254,7 +332,7 @@ const Wallet = () => {
       <div className="p-6 bg-white/5 backdrop-blur-lg rounded-xl">
         <h2 className="text-xl font-bold mb-4 text-[#7b52d3]">Pending Payments</h2>
         <div className="space-y-4">
-          {(data?.transactions || [])
+          {(alltransactions || [])
             .filter(tx => tx.status === 'PENDING')
             .map((tx) => (
               <div
@@ -277,7 +355,7 @@ const Wallet = () => {
                 </div>
               </div>
             ))}
-          {(data?.transactions || []).filter(tx => tx.status === 'PENDING').length === 0 && (
+          {(alltransactions || []).filter(tx => tx.status === 'PENDING').length === 0 && (
             <div className="text-gray-400 text-center py-4">
               No pending payments
             </div>

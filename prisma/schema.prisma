@@ -300,7 +300,7 @@ model Wallet {
 
   @@index([userId])
 }
-
+ 
 model Transaction {
   id String @id @default(cuid())
 

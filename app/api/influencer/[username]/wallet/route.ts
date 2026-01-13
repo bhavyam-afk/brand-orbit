@@ -25,8 +25,8 @@ export async function GET(
 
     const wallets = await prisma.wallet.findUnique({
       where: { userId },
-      select: { currentBalance: true, pendingBalance: true, totalEarned: true, totalSpent: true, outgoingTransactions: true, incomingTransactions: true },
-    });
+      include: { outgoingTransactions: true, incomingTransactions: true },
+    }); 
     return NextResponse.json({
       currentBalance: wallets?.currentBalance,
       pendingBalance: wallets?.pendingBalance,

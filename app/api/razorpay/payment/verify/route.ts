@@ -32,19 +32,6 @@ export async function POST(req: Request) {
             );
         }
 
-        console.log("order_id:", razorpay_order_id);
-        console.log("payment_id:", razorpay_payment_id);
-        console.log("signature:", razorpay_signature);
-
-        console.log(
-            "generated:",
-            crypto
-                .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-                .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-                .digest("hex")
-        );
-
-
         /* -----------------------------------------
          * 1️⃣ VERIFY RAZORPAY SIGNATURE
          * ----------------------------------------- */
