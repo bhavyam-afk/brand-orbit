@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { openRazorpayCheckout } from '@/components/OpenRazorPayCheckOut';
+import { openRazorpayCheckout } from '@/components/Razorpay/OpenRazorPayCheckOut';
 import { ContentDraft } from "@/types/contentDraft";
 import {
   BrandProfile,

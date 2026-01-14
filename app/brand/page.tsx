@@ -4,7 +4,8 @@ import React from 'react'
 const page = () => {
   return (
     <div>
-      info about why brands should be in board here. 
+      info about why brands should be in board here.
+      page for brands to know how to use this app.  
     </div>
   )
 }

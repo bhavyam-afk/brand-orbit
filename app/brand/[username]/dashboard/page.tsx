@@ -6,6 +6,7 @@ import Settings from "@/components/br-dash-components/Settings";
 import Analytics from "@/components/br-dash-components/Analytics";
 import Wallet from "@/components/br-dash-components/Wallet";
 import Deals from "@/components/br-dash-components/Deals";
+import Plans from "@/components/br-dash-components/Plans";
 import { signOut } from "next-auth/react";
 
 const sidebarOptions = [
@@ -15,6 +16,7 @@ const sidebarOptions = [
   { key: "analytics", label: "Analytics" },
   { key: "wallet", label: "Wallet" },
   { key: "settings", label: "Settings" },
+  { key: "plan", label: "Plan" },
 ];
 
 const BrandDashboard = () => {
@@ -51,6 +53,7 @@ const BrandDashboard = () => {
         {selected === "analytics" && <div><Analytics /></div>}
         {selected === "wallet" && <div><Wallet /></div>}
         {selected === "settings" && <div><Settings /></div>}
+        {selected === "plan" && <div><Plans /></div>} 
       </main>
     </div>
   );

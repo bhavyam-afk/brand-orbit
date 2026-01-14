@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Profile from "@/components/in-dash-components/Profile";
-import ListPackages from "@/components/in-dash-components/ListPackages";
+import React, { useState } from "react";
+import Profile from "@/components/in-dash-components/Profile/Profile";
+import ListPackages from "@/components/in-dash-components/Packages/ListPackages";
 import AnalyticsDashboard from "@/components/in-dash-components/AnalyticsDashboard";
-import Deals from "@/components/in-dash-components/Deals";
-import Wallet from "@/components/in-dash-components/Wallet";
+import Deals from "@/components/in-dash-components/Deals/Deals";
+import Wallet from "@/components/in-dash-components/Wallet/Wallet";
 import Settings from "@/components/in-dash-components/Settings";
 // import Feed from "@/in-dash-components/Feed";
-import MetaConnectButton from "@/components/MetaConnectButton";
+import MetaConnectButton from "@/components/Meta/MetaConnectButton";
 import { signOut } from "next-auth/react";
 
 const sidebarOptions = [
@@ -23,32 +22,29 @@ const sidebarOptions = [
 ];
 
 const InfluencerDashboard = () => {
-  const router = useRouter();
   const [activeSection, setActiveSection] = useState("Profile");
-
-  // Get username from URL
-  const username = (typeof window !== "undefined") ? window.location.pathname.split("/")[2] : "";
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
 
-      {/* Top Navigation Bar */}
-      <div className=" mx-auto flex items-center justify-between space-x-6 w-[80vw] px-6 py-4 bg-white border-b">
+      {/* Top Bar */}
+      <div className="mx-auto flex items-center justify-between space-x-6 w-[80vw] px-6 py-4 bg-white border-b">
 
-        {/* Logo Section */}
+        {/* Logo  */}
         <div className="flex items-center gap-3">
-          <img src="/BO.png" alt="Brand Orbit Logo" className="w-8 h-8 rounded"
+          <img src="/BO.png" alt="Brand Orbit Logo" className="w-8 h-8 rounded-xl cursor-pointer"
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = "app/public/BO.png";
             }}
+            onClick={()=>{setActiveSection("Profile")}}
           />
-          <span className="font-bold text-xl text-[#7b52d3]">Brand Orbit</span>
+          <span className="font-bold text-xl text-[#7b52d3] cursor-pointer" onClick={()=>{setActiveSection("Profile")}}>Brand Orbit</span>
         </div>
 
         <MetaConnectButton />
 
-        {/* Navigation Options */}
+        {/* Top Bar Options */}
         <nav className="flex text-xs items-center gap-1">
           {sidebarOptions.map((option) => (
             <button

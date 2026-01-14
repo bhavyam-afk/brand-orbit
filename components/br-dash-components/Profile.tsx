@@ -56,16 +56,16 @@ export default function Profile() {
   }, []);
 
   return (
-    <div className="bg-[#232946] rounded-2xl shadow-lg p-8 flex flex-col gap-8 border border-yellow-300">
+    <div className="bg-[#232946] rounded-2xl shadow-lg p-8 flex flex-col gap-8">
       <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-yellow-300"><span>🧭</span>Brand Profile & Organization Setup</h2>
 
       {loading && <div className="text-gray-300">Loading brand profile…</div>}
       {error && <div className="text-red-400">Error: {error}</div>}
 
       {!loading && !error && (
-        <div className="flex flex-row gap-6">
+        <div className="flex flex-row gap-6 items-start">
           {/* Profile Card */}
-          <div className="min-w-[320px] max-w-[420px] bg-[#0b1220] rounded-2xl p-6 shadow border border-yellow-200">
+          <div className="min-w-[280px] max-w-[420px] bg-[#0b1220] rounded-2xl p-6 shadow">
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-yellow-300 bg-gray-800">
                 {profile?.logoUrl ? (

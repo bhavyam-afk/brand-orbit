@@ -9,7 +9,8 @@ import React from 'react'
 const page = () => {
   return (
     <div>
-      page about what it adds to creators. 
+      page about what it adds to creators.
+      page for creator awareness about how to use this app. 
     </div>
   )
 }

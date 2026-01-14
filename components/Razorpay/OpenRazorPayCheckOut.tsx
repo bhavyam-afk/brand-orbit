@@ -1,4 +1,4 @@
-import { loadRazorpay } from "@/components/LoadRazorpay"
+import { loadRazorpay } from "@/components/Razorpay/LoadRazorpay"
 
 export async function openRazorpayCheckout({
   orderId,

@@ -84,6 +84,18 @@ enum CollabType {
   CAMPAIGN
 }
 
+enum SubscriptionPlan {
+  BASIC
+  PRO
+  BUSINESS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
 // --- CORE MODELS ---
 
 model User {
@@ -148,10 +160,12 @@ model BrandProfile {
   socialLinks  Json? // Store as [{ "platform": "website", "url": "..." }]
   walletId     String?  @unique
   wallet       Wallet?  @relation(fields: [walletId], references: [id]) // 1-to-1 relation with Wallet
+  plan        SubscriptionPlan @default(BASIC)
 
   // Relations
   campaigns      Campaign[]
   collaborations Collaboration[]
+  subscription   BrandSubscription?
 
   @@unique([id, username])
   @@index([userId])
@@ -329,6 +343,31 @@ model Transaction {
   @@index([fromWalletId])
   @@index([toWalletId])
   @@index([collabId])
+}
+
+model BrandSubscription {
+  id String @id @default(cuid())
+
+  brandId String @unique
+  brand   BrandProfile @relation(fields: [brandId], references: [id])
+
+  plan       SubscriptionPlan
+  status     SubscriptionStatus @default(ACTIVE)
+
+  // for downgrade scheduling
+  nextPlan   SubscriptionPlan?
+
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+
+  // Razorpay references (null for FREE)
+  razorpaySubscriptionId String?
+  razorpayPlanId         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId])
 }
 
 model CreatorFollowerSnapshot {
