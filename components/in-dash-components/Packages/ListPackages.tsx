@@ -12,7 +12,7 @@ export default function ListPackages() {
   return (
     <div className="flex flex-col items-center p-8 gap-6">
 
-      <div className="w-full flex justify-end">
+      <div className="w-full flex justify-center mb-4">
         <button onClick={openForm} className="px-4 py-2 bg-[#7b52d3] text-white rounded-xl">
           Add package
         </button>

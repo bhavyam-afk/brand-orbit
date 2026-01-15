@@ -1,12 +1,12 @@
 "use client";
 import React, { useState } from "react";
-import Profile from "@/components/br-dash-components/Profile"; 
-import BrandFeed from "@/components/br-dash-components/BrandFeed";
+import BrandProfile from "@/components/br-dash-components/Profile/BrandProfile"; 
+import BrandFeed from "@/components/br-dash-components/Feed/BrandFeed";
 import Settings from "@/components/br-dash-components/Settings";
 import Analytics from "@/components/br-dash-components/Analytics";
-import Wallet from "@/components/br-dash-components/Wallet";
-import Deals from "@/components/br-dash-components/Deals";
-import Plans from "@/components/br-dash-components/Plans";
+import Wallet from "@/components/br-dash-components/Wallet/BrandWallet";
+import Deals from "@/components/br-dash-components/Deals/BrandDeals";
+import PricingSection from "@/components/br-dash-components/Plans/pricing-section";
 import { signOut } from "next-auth/react";
 
 const sidebarOptions = [
@@ -47,13 +47,13 @@ const BrandDashboard = () => {
       </aside>
       {/* Main content */}
       <main className="flex-1 p-10">
-        {selected === "profile" && <Profile />}
+        {selected === "profile" && <BrandProfile />}
         {selected === "feed" && <div><BrandFeed /></div>}
         {selected === "Deals" && <div><Deals /></div>}
         {selected === "analytics" && <div><Analytics /></div>}
         {selected === "wallet" && <div><Wallet /></div>}
         {selected === "settings" && <div><Settings /></div>}
-        {selected === "plan" && <div><Plans /></div>} 
+        {selected === "plan" && <div className="w-full"><PricingSection /></div>} 
       </main>
     </div>
   );

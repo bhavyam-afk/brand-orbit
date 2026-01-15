@@ -1,16 +1,6 @@
 import { Package } from "@/types/Package";
 
-export default function DraftPackages({
-  packages,
-  canActivate,
-  onActivate,
-  onDelete,
-}: {
-  packages: Package[];
-  canActivate: () => boolean;
-  onActivate: (id: string) => void;
-  onDelete: (id: string) => void;
-}) {
+export default function DraftPackages({ packages, canActivate, onActivate, onDelete }: { packages: Package[]; canActivate: () => boolean; onActivate: (id: string) => void; onDelete: (id: string) => void }) {
   const drafts = packages.filter((p) => p.status === "DRAFT");
 
   return (

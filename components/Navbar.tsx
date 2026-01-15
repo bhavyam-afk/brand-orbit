@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Navbuttons from "./Navbuttons";
+import Navbuttons from "@/components/Auth/Navbuttons";
 import { NavBaro } from "@/components/ui/tubelight-navbar";
 import { Rocket, Briefcase, Users, Star, HelpCircle, } from "lucide-react";
 import { LucideIcon } from "lucide-react";
@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
     },
     {
         name: "For Influencers",
-        url: "/influencer",
+        url: "/creator",
         icon: Users,
     },
     {

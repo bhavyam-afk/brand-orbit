@@ -1,15 +1,7 @@
 import { Package } from "@/types/Package";
 import { formatPrice } from "./package.utils";
 
-export default function PackageCard({
-  pkg,
-  actionLabel,
-  onAction,
-}: {
-  pkg: Package;
-  actionLabel: string;
-  onAction: () => void;
-}) {
+export default function PackageCard({ pkg, actionLabel, onAction }: { pkg: Package; actionLabel: string; onAction: () => void; }) {
   return (
     <div className="bg-white rounded-2xl shadow p-4 w-[420px]">
       {pkg.thumbnailUrl ? (

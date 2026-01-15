@@ -17,7 +17,7 @@ export default function Profile() {
   return (
     <div className="w-full h-full flex items-center justify-center p-8">
 
-      <div className="profilecard mx-4">
+      <div className="profilecard mx-4 h-full">
         <ProfileCard data={data} />
       </div>
 

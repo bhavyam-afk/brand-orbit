@@ -63,7 +63,7 @@ export function usePackages() {
     });
   }
 
-  function canActivateDraft() {
+  function canActivateDraft(): boolean {
     return packages.filter(p => p.status === "ACTIVE").length < 2;
   }
 

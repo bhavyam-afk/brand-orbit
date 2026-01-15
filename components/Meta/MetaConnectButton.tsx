@@ -83,7 +83,7 @@ export default function MetaConnectButton() {
   return (
     <>
       {connected === false &&
-        <button onClick={handleConnect} className="px-4 py-2 bg-blue-600 text-white rounded">
+        <button onClick={handleConnect} className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded">
           Connect Instagram
         </button>
       }

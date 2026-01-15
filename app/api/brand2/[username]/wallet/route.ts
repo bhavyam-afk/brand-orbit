@@ -17,16 +17,11 @@ export async function GET(
     const wallet = await prisma.wallet.findUnique({
       where: { userId: brand.userId },
       include: {
-        transactions: {
+        outgoingTransactions: {
           orderBy: { createdAt: 'desc' },
-          include: {
-            collaboration: {
-              include: {
-                creator: { select: { id: true, username: true } },
-                package: { select: { id: true, title: true } },
-              }
-            }
-          }
+        },
+        incomingTransactions: {
+          orderBy: { createdAt: 'desc' },
         }
       }
     });
@@ -55,25 +50,50 @@ export async function GET(
     const monthlyMap: Record<string, number> = {};
     months.forEach(m => (monthlyMap[m] = 0));
 
-    const mappedTransactions = (wallet.transactions || []).map((t: any) => ({
+    // Combine all transactions
+    const allTransactions = [
+      ...(wallet.outgoingTransactions || []),
+      ...(wallet.incomingTransactions || [])
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Fetch collaboration details for transactions that have collabId
+    const collabIds = allTransactions
+      .filter(t => t.collabId)
+      .map(t => t.collabId) as string[];
+
+    const collaborationsMap: Record<string, any> = {};
+    if (collabIds.length > 0) {
+      const collabs = await prisma.collaboration.findMany({
+        where: { id: { in: collabIds } },
+        include: {
+          creator: { select: { id: true, username: true } },
+          package: { select: { id: true, title: true } },
+        }
+      });
+      collabs.forEach(c => {
+        collaborationsMap[c.id] = c;
+      });
+    }
+
+    const mappedTransactions = allTransactions.map((t: any) => ({
       id: t.id,
       amount: Number(t.amount),
       type: t.type,
       status: t.status,
       createdAt: t.createdAt,
-      collaboration: t.collaboration ? {
-        id: t.collaboration.id,
-        creatorUsername: t.collaboration.creator?.username,
-        packageTitle: t.collaboration.package?.title,
+      collaboration: t.collabId && collaborationsMap[t.collabId] ? {
+        id: collaborationsMap[t.collabId].id,
+        creatorUsername: collaborationsMap[t.collabId].creator?.username,
+        packageTitle: collaborationsMap[t.collabId].package?.title,
       } : null,
     }));
 
-    // Sum payments (type PAYMENT) completed into monthlyMap
+    // Sum payments (type BRAND_PAYMENT) completed into monthlyMap
     for (const t of mappedTransactions) {
       if (!t.createdAt) continue;
       const d = new Date(t.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (key in monthlyMap && t.type === 'PAYMENT' && (t.status === 'COMPLETED' || t.status === 'PAYOUT')) {
+      if (key in monthlyMap && t.type === 'BRAND_PAYMENT' && t.status === 'COMPLETED') {
         monthlyMap[key] += Number(t.amount || 0);
       }
     }

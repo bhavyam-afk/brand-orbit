@@ -1,4 +1,4 @@
-import { PrismaClient, WalletType, TransactionType, TransactionStatus, UserType, CollabStatus, contentStatus, CollabType, PackageStatus, CreatorCategory } from "@prisma/client";
+import { PrismaClient, UserType, WalletType, PackageStatus, CollabStatus, CollabType, TransactionType, TransactionStatus, CreatorCategory, SubscriptionPlan, SubscriptionStatus, contentStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -6,216 +6,235 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding database...");
 
- await prisma.transaction.deleteMany();
-  await prisma.wallet.deleteMany();
-
-  // Content & collaboration
-  await prisma.packageCollaboration.deleteMany();
-  await prisma.campaignCollaboration.deleteMany();
-  await prisma.report.deleteMany();
-  await prisma.collaboration.deleteMany();
-
-  // Packages & campaigns
-  await prisma.package.deleteMany();
-  await prisma.campaign.deleteMany();
-
-  // Creator dependent tables
-  await prisma.creatorAvailability.deleteMany();
-  await prisma.creatorDailyMetrics.deleteMany();
-  await prisma.creatorFollowerSnapshot.deleteMany();
-  await prisma.creatorSocialAccount.deleteMany();
-  await prisma.creatorSocialRawSnapshot.deleteMany();
-
-  // Profiles
-  await prisma.creatorProfile.deleteMany();
-  await prisma.brandProfile.deleteMany();
-
-  // Core users
-  await prisma.user.deleteMany();
-
-  /* -------------------------------------------------
-   * PLATFORM WALLET
-   * ------------------------------------------------- */
+  // ---------------------------
+  // PLATFORM WALLET
+  // ---------------------------
   const platformUser = await prisma.user.create({
     data: {
       email: "platform@brandorbit.com",
-      username: "platform",
-      passwordHash: await bcrypt.hash("password", 10),
+      username: "brandorbit",
+      passwordHash: await bcrypt.hash("admin123", 10),
       userType: UserType.BRAND,
+      wallet: {
+        create: {
+          walletType: WalletType.PLATFORM,
+          currentBalance: 0,
+          pendingBalance: 0,
+          totalEarned: 0,
+          totalSpent: 0,
+        },
+      },
     },
   });
 
-  const platformWallet = await prisma.wallet.create({
-    data: {
-      userId: platformUser.id,
-      walletType: WalletType.PLATFORM,
-    },
+  const platformWallet = await prisma.wallet.findUnique({
+    where: { userId: platformUser.id },
   });
 
-  /* -------------------------------------------------
-   * BRAND
-   * ------------------------------------------------- */
-  const brandUser = await prisma.user.create({
-    data: {
-      email: "brand@test.com",
-      username: "testbrand",
-      passwordHash: await bcrypt.hash("password", 10),
-      userType: UserType.BRAND,
-    },
-  });
+  // ---------------------------
+  // CREATORS
+  // ---------------------------
+  const creators = await Promise.all(
+    ["alice", "bob"].map(async (name, idx) => {
+      const user = await prisma.user.create({
+        data: {
+          email: `${name}@creator.com`,
+          username: name,
+          passwordHash: await bcrypt.hash("password123", 10),
+          userType: UserType.CREATOR,
+          wallet: {
+            create: {
+              walletType: WalletType.CREATOR,
+              currentBalance: 0,
+              pendingBalance: 0,
+              totalEarned: 0,
+              totalSpent: 0,
+            },
+          },
+          creatorProfile: {
+            create: {
+              username: name,
+              bio: `${name} is a professional content creator`,
+              location: "India",
+              niche: "Tech",
+              nicheTags: ["tech", "reviews", "shorts"],
+              profilePicUrl: "https://picsum.photos/200",
+              introClipUrl: "https://example.com/intro.mp4",
+              portfolio: [{ title: "Sample Work", url: "https://instagram.com" }],
+              mlScore: 0.78 + idx * 0.05,
+              category: CreatorCategory.MICRO,
+              platformLinks: [{ platform: "instagram", url: "https://instagram.com" }],
+              follower_count: 12000 + idx * 5000,
+            },
+          },
+        },
+        include: { creatorProfile: true },
+      });
 
-  const brandWallet = await prisma.wallet.create({
-    data: {
-      userId: brandUser.id,
-      walletType: WalletType.BRAND,
-    },
-  });
+      return user.creatorProfile!;
+    })
+  );
 
-  const brandProfile = await prisma.brandProfile.create({
-    data: {
-      userId: brandUser.id,
-      username: "testbrand",
-      walletId: brandWallet.id,
-      industryTags: ["fashion", "lifestyle"],
-    },
-  });
+  // ---------------------------
+  // BRANDS
+  // ---------------------------
+  const brands = await Promise.all(
+    ["nike", "apple"].map(async (name, idx) => {
+      const user = await prisma.user.create({
+        data: {
+          email: `${name}@brand.com`,
+          username: name,
+          passwordHash: await bcrypt.hash("password123", 10),
+          userType: UserType.BRAND,
+          wallet: {
+            create: {
+              walletType: WalletType.BRAND,
+              currentBalance: 50000,
+              pendingBalance: 0,
+              totalEarned: 0,
+              totalSpent: 0,
+            },
+          },
+          brandProfile: {
+            create: {
+              username: name,
+              logoUrl: "https://picsum.photos/100",
+              bio: `${name} is a global brand`,
+              industryTags: ["fashion", "tech"],
+              socialLinks: [{ platform: "website", url: "https://example.com" }],
+              plan: idx === 0 ? SubscriptionPlan.PRO : SubscriptionPlan.BUSINESS,
+              subscription: {
+                create: {
+                  plan: idx === 0 ? SubscriptionPlan.PRO : SubscriptionPlan.BUSINESS,
+                  status: SubscriptionStatus.ACTIVE,
+                  currentPeriodStart: new Date(),
+                  currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                },
+              },
+            },
+          },
+        },
+        include: { brandProfile: true },
+      });
 
-  /* -------------------------------------------------
-   * CREATOR
-   * ------------------------------------------------- */
-  const creatorUser = await prisma.user.create({
-    data: {
-      email: "creator@test.com",
-      username: "testcreator",
-      passwordHash: await bcrypt.hash("password", 10),
-      userType: UserType.CREATOR,
-    },
-  });
+      return user.brandProfile!;
+    })
+  );
 
-  const creatorWallet = await prisma.wallet.create({
-    data: {
-      userId: creatorUser.id,
-      walletType: WalletType.CREATOR,
-    },
-  });
+  // ---------------------------
+  // PACKAGES
+  // ---------------------------
+  const packages = await Promise.all(
+    creators.map((creator, idx) =>
+      prisma.package.create({
+        data: {
+          creatorId: creator.id,
+          title: `Instagram Reel by ${creator.username}`,
+          description: "High quality reel with brand mention",
+          thumbnailUrl: "https://picsum.photos/300",
+          mediaType: "Instagram Reel",
+          deliverables: ["1 Reel", "1 Story"],
+          deliveryTimeDays: 5,
+          price: 5000 + idx * 2000,
+          packagestatus: PackageStatus.ACTIVE,
+        },
+      })
+    )
+  );
 
-  const creatorProfile = await prisma.creatorProfile.create({
-    data: {
-      userId: creatorUser.id,
-      username: "testcreator",
-      walletId: creatorWallet.id,
-      category: CreatorCategory.MICRO,
-      nicheTags: ["fitness", "reels"],
-    },
-  });
+  // ---------------------------
+  // COLLABORATIONS + PACKAGE COLLAB
+  // ---------------------------
+  const collabs = await Promise.all(
+    packages.map((pkg, idx) =>
+      prisma.collaboration.create({
+        data: {
+          creatorId: pkg.creatorId,
+          brandId: brands[idx % brands.length].id,
+          packageId: pkg.id,
+          collabType: CollabType.PACKAGE,
+          collabstatus: CollabStatus.COMPLETED,
+          packageCollaborations: {
+            create: {
+              packageId: pkg.id,
+              contentStatus: contentStatus.APPROVED,
+              contentDraft: {
+                fileUrls: ["https://example.com/draft.mp4"],
+                description: "Draft submitted",
+              },
+              draftSubmittedAt: new Date(),
+              draftapprovalAt: new Date(),
+              publishedContentUrl: "https://instagram.com/p/xyz",
+              publishedAt: new Date(),
+              brandFeedback: "Looks great!",
+            },
+          },
+        },
+      })
+    )
+  );
 
-  /* -------------------------------------------------
-   * PACKAGE
-   * ------------------------------------------------- */
-  const pkg = await prisma.package.create({
-    data: {
-      creatorId: creatorProfile.id,
-      title: "Instagram Reel Promotion",
-      mediaType: "Instagram Reel",
-      deliverables: ["1 Reel"],
-      deliveryTimeDays: 7,
-      price: 10000,
-      packagestatus: PackageStatus.ACTIVE,
-    },
-  });
+  // ---------------------------
+  // TRANSACTIONS
+  // ---------------------------
+  for (let i = 0; i < collabs.length; i++) {
+    const collab = collabs[i];
+    const pkg = packages[i];
+    const creatorWallet = await prisma.wallet.findFirst({ where: { creatorProfile: { id: collab.creatorId } } });
+    const brandWallet = await prisma.wallet.findFirst({ where: { brandProfile: { id: collab.brandId } } });
 
-  /* -------------------------------------------------
-   * COLLABORATION
-   * ------------------------------------------------- */
-  const collab = await prisma.collaboration.create({
-    data: {
-      creatorId: creatorProfile.id,
-      brandId: brandProfile.id,
-      packageId: pkg.id,
-      collabType: CollabType.PACKAGE,
-      collabstatus: CollabStatus.ACTIVE,
-    },
-  });
+    if (!creatorWallet || !brandWallet || !platformWallet) continue;
 
-  await prisma.packageCollaboration.create({
-    data: {
-      collabId: collab.id,
-      packageId: pkg.id,
-      contentStatus: contentStatus.APPROVED,
-      draftSubmittedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      draftapprovalAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-      publishedContentUrl: "https://instagram.com/p/testpost",
-      publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    },
-  });
+    // Brand pays platform
+    await prisma.transaction.create({
+      data: {
+        fromWalletId: brandWallet.id,
+        toWalletId: platformWallet.id,
+        amount: pkg.price,
+        type: TransactionType.BRAND_PAYMENT,
+        status: TransactionStatus.COMPLETED,
+        collabId: collab.id,
+        provider: "RAZORPAY",
+        externalPaymentId: `pay_${i}`,
+        externalOrderId: `order_${i}`,
+      },
+    });
 
-  /* -------------------------------------------------
-   * ESCROW PAYMENT SIMULATION
-   * ------------------------------------------------- */
-  const totalAmount = 10000;
-  const platformFee = 1000;
-  const creatorAmount = 9000;
+    // Platform credits creator (escrow released)
+    await prisma.transaction.create({
+      data: {
+        fromWalletId: platformWallet.id,
+        toWalletId: creatorWallet.id,
+        amount: pkg.price,
+        type: TransactionType.CREATOR_EARNING,
+        status: TransactionStatus.COMPLETED,
+        collabId: collab.id,
+      },
+    });
 
-  // BRAND → PLATFORM (external payment)
-  await prisma.transaction.create({
-    data: {
-      type: TransactionType.BRAND_PAYMENT,
-      status: TransactionStatus.COMPLETED,
-      amount: totalAmount,
-      toWalletId: platformWallet.id,
-      collabId: collab.id,
-      provider: "RAZORPAY",
-      externalPaymentId: "pay_test_123",
-      externalOrderId: "order_test_123",
-    },
-  });
+    // Update balances
+    await prisma.wallet.update({
+      where: { id: creatorWallet.id },
+      data: {
+        currentBalance: { increment: pkg.price },
+        totalEarned: { increment: pkg.price },
+      },
+    });
 
-  // PLATFORM → CREATOR (escrow credit, pending)
-  await prisma.transaction.create({
-    data: {
-      type: TransactionType.CREATOR_EARNING,
-      status: TransactionStatus.PENDING,
-      amount: creatorAmount,
-      fromWalletId: platformWallet.id,
-      toWalletId: creatorWallet.id,
-      collabId: collab.id,
-    },
-  });
+    await prisma.wallet.update({
+      where: { id: brandWallet.id },
+      data: {
+        totalSpent: { increment: pkg.price },
+      },
+    });
+  }
 
-  // PLATFORM FEE (revenue)
-  await prisma.transaction.create({
-    data: {
-      type: TransactionType.PLATFORM_FEE,
-      status: TransactionStatus.COMPLETED,
-      amount: platformFee,
-      fromWalletId: platformWallet.id,
-      toWalletId: platformWallet.id,
-      collabId: collab.id,
-    },
-  });
-
-  // Update wallet balances (as escrow would)
-  await prisma.wallet.update({
-    where: { id: creatorWallet.id },
-    data: {
-      pendingBalance: creatorAmount,
-      totalEarned: creatorAmount,
-    },
-  });
-
-  await prisma.wallet.update({
-    where: { id: platformWallet.id },
-    data: {
-      totalEarned: platformFee,
-    },
-  });
-
-  console.log("✅ Seed completed successfully");
+  console.log("✅ Seeding completed successfully");
 }
 
 main()
-  .catch((e) => {
-    console.error("❌ Seed failed", e);
+  .catch(e => {
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { useRouter } from 'next/navigation';
+import { AuthComponent } from "@/components/ui/sign-up";
 
 interface SignupCardProps {
   userType: "brand" | "creator";
@@ -74,7 +75,14 @@ const SignupCard = ({ userType }: SignupCardProps) => {
       </form>
 
     </div>
+    // <div className="cover h-[60vh] w-[80vw] flex ">
+    //   <AuthComponent
+    //     logo=""
+    //     brandName="BrandOrbit"
+    //   />
+    // </div>
   );
 };
 
 export default SignupCard;
+

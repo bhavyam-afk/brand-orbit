@@ -50,7 +50,7 @@ const InfluencerDashboard = () => {
             <button
               key={option}
               onClick={() => setActiveSection(option)}
-              className={`px-4 py-2 rounded-full font-medium transition-colors ${activeSection === option ? "bg-[#2D2D2D] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              className={`cursor-pointer px-4 py-2 rounded-full font-medium transition-colors ${activeSection === option ? "bg-[#2D2D2D] text-white" : "text-gray-600 hover:bg-gray-100"}`}
             >
               <span className="flex items-center gap-2">
                 <span className="text-lg">
@@ -104,7 +104,7 @@ const InfluencerDashboard = () => {
 
           {/* Logout Button */}
           <button
-            className="ml-auto px-4 py-2 text-red-600 hover:bg-red-50 rounded-full font-medium transition-colors"
+            className="cursor-pointer ml-auto px-4 py-2 text-red-600 hover:bg-red-50 rounded-full font-medium transition-colors"
             onClick={() => signOut({ callbackUrl: "/" })}
           >
             Logout
