@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { CollabStatus } from "@prisma/client";
+import { set } from "mongoose";
 
 export function useBrandDeals(username?: string) {
   const [collabs, setCollabs] = useState<any[]>([]);
+  const [custom, setCustom] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,6 +21,7 @@ export function useBrandDeals(username?: string) {
         if (!res.ok) throw new Error("Failed to fetch collaborations");
         const data = await res.json();
         setCollabs(Array.isArray(data) ? data : data.collaborations ?? []);
+        setCustom(Array.isArray(data) ? data : data.requests ?? []);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -31,5 +34,5 @@ export function useBrandDeals(username?: string) {
 
   const byStatus = (status: CollabStatus) => collabs.filter(c => c.collabstatus === status);
 
-  return { collabs, loading, error, active: byStatus("ACTIVE"), pending: byStatus("PENDING"), completed: byStatus("COMPLETED"), setCollabs };
+  return { collabs, loading, error, active: byStatus("ACTIVE"), pending: byStatus("PENDING"), completed: byStatus("COMPLETED"), setCollabs, custom, setCustom };
 }

@@ -25,10 +25,10 @@ const InfluencerDashboard = () => {
   const [activeSection, setActiveSection] = useState("Profile");
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col">
 
       {/* Top Bar */}
-      <div className="mx-auto flex items-center justify-between space-x-6 w-[80vw] px-6 py-4 bg-white border-b">
+      <div className="mx-auto flex items-center justify-between space-x-6 w-[80vw] px-6 py-4 border-b">
 
         {/* Logo  */}
         <div className="flex items-center gap-3">
@@ -50,7 +50,7 @@ const InfluencerDashboard = () => {
             <button
               key={option}
               onClick={() => setActiveSection(option)}
-              className={`cursor-pointer px-4 py-2 rounded-full font-medium transition-colors ${activeSection === option ? "bg-[#2D2D2D] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+              className={`cursor-pointer px-4 py-2 rounded-full font-medium transition-colors ${activeSection === option ? "text-white" : "text-gray-600 hover:bg-gray-100"}`}
             >
               <span className="flex items-center gap-2">
                 <span className="text-lg">

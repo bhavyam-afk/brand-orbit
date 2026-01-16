@@ -96,6 +96,13 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum CustomPackageStatus {
+  REQUESTED     // Brand sent proposal
+  COUNTERED     // Creator modified scope/price
+  ACCEPTED
+  REJECTED
+}
+
 // --- CORE MODELS ---
 
 model User {
@@ -139,9 +146,10 @@ model CreatorProfile {
   collaborations     Collaboration[]
   followerSnapshots  CreatorFollowerSnapshot[]
   availabilities     CreatorAvailability[]
-  dailyMetrics       CreatorDailyMetrics[]
   socialAccounts     CreatorSocialAccount[]
   rawSocialSnapshots CreatorSocialRawSnapshot[]
+  dailyAnalytics     CreatorDailyAnalytics[]
+  customPackageRequests CustomPackageRequest[]
 
   @@unique([id, username])
   @@index([userId])
@@ -166,6 +174,7 @@ model BrandProfile {
   campaigns      Campaign[]
   collaborations Collaboration[]
   subscription   BrandSubscription?
+  customPackageRequests CustomPackageRequest[]
 
   @@unique([id, username])
   @@index([userId])
@@ -408,22 +417,6 @@ model CreatorSocialRawSnapshot {
   @@index([creatorId, fetchedAt])
 }
 
-model CreatorDailyMetrics {
-  id        String   @id @default(cuid())
-  creatorId String
-  date      DateTime
-
-  followers   Int
-  reach       Int?
-  impressions Int?
-  engagement  Int?
-
-  creator CreatorProfile @relation(fields: [creatorId], references: [id])
-
-  @@unique([creatorId, date])
-  @@index([creatorId, date])
-}
-
 model CreatorSocialAccount {
   id             String    @id @default(cuid())
   creatorId      String
@@ -440,3 +433,59 @@ model CreatorSocialAccount {
 
   @@unique([creatorId, platform])
 }
+
+model CreatorDailyAnalytics {
+  id        String   @id @default(cuid())
+  creatorId String
+  date      DateTime
+  // ---------- Audience ----------
+  followers Int
+  // ---------- Visibility ----------
+  reach       Int        // unique accounts reached
+  impressions Int        // total views
+  // ---------- Engagement ----------
+  engagements Int        // total interactions (aggregate)
+  likes    Int
+  comments Int
+  shares   Int
+  saves    Int
+  replies  Int
+  // ---------- Profile ----------
+  profileViews Int
+  createdAt DateTime @default(now())
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+
+  @@unique([creatorId, date])
+  @@index([creatorId, date])
+}
+
+model CustomPackageRequest {
+  id String @id @default(cuid())
+  brandId   String
+  creatorId String
+  title        String
+  description  String? @db.Text
+  deliverables String[]
+  price        Decimal @db.Decimal(10,2)
+  deliveryDays Int
+  status CustomPackageStatus @default(REQUESTED)
+
+  // optional negotiation
+  counterPrice        Decimal?
+  counterDeliverables String[]
+  counterMessage      String?
+
+  // linkage after accept
+  collaborationId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brand   BrandProfile   @relation(fields: [brandId], references: [id])
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+
+  @@index([creatorId, status])
+  @@index([brandId])
+}
+

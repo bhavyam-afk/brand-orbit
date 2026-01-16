@@ -1,17 +1,36 @@
-// components/brand/Feed/types.ts
+// types.ts
 
-export type Creator = {
+// ------------------
+// Creator
+// ------------------
+export interface Creator {
   id: string;
   username: string;
-  profilePicUrl?: string | null;
   category?: string | null;
   niche?: string | null;
-  nicheTags?: string[];
   location?: string | null;
-};
+  nicheTags?: string[] | null;
+  profilePicUrl?: string | null;
+  bio?: string | null;
+}
 
-export type DraftInfo = {
+// ------------------
+// Creator Package
+// ------------------
+export interface CreatorPackage {
+  id: string;
+  creatorId: string;
+  title: string;
+  description?: string | null;
+  price?: number | string;
+}
+
+// ------------------
+// Draft Info
+// ------------------
+export interface DraftInfo {
   packageId: string;
   fileUrls: string[];
   submittedAt?: string;
-};
+  brandFeedback?: string | null;
+}

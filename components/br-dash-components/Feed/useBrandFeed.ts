@@ -3,7 +3,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Creator, DraftInfo } from "./types";
+import { Creator, CreatorPackage, DraftInfo } from "./types";
 
 export function useBrandFeed() {
   const [creators, setCreators] = useState<Creator[]>([]);
@@ -84,7 +84,7 @@ export function useBrandFeed() {
     setSelectedDraft(null);
   };
 
-  const requestPackage = async (pkg: any) => {
+  const requestPackage = async (pkg: CreatorPackage) => {
     if (!selectedCreator) return;
     setRequestError(null);
     setRequestingPackageId(pkg.id);
@@ -136,5 +136,6 @@ export function useBrandFeed() {
     closeModal,
     requestPackage,
     setSelectedDraft,
+    getBrandUsername,
   };
 }

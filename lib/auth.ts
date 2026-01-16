@@ -13,3 +13,4 @@ export async function verifyPassword(password: string, hash: string) {
 export function generateJWT(payload: Record<string, any>, secret: string, expiresIn: string = '1d'): string {
   return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
 }
+

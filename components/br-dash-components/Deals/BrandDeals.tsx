@@ -10,7 +10,7 @@ import { openRazorpayCheckout } from "@/components/Razorpay/OpenRazorPayCheckOut
 
 export default function BrandDeals() {
     const { username } = useParams<{ username: string }>();
-    const { collabs, active, pending, completed } = useBrandDeals(username);
+    const { collabs, active, pending, completed, custom } = useBrandDeals(username);
 
     const [filter, setFilter] = useState<"all" | "active" | "pending" | "completed">("all");
     const [selectedDraft, setSelectedDraft] = useState<any | null>(null);
@@ -60,7 +60,33 @@ export default function BrandDeals() {
             )}
 
             {(filter === "all" || filter === "pending") && (
+                <>
                 <DealsList title="Pending" deals={pending} onSelectDraft={setSelectedDraft} />
+                {custom.length > 0 && (
+                    <>
+                        <h2 className="mt-8 mb-4 text-2xl text-white font-semibold">Custom Package Requests</h2>
+                        <div className="customs">
+                            {custom.map((req) => {
+                                return (<div key={req.id} className="bg-[#111827] rounded-lg p-4 mb-4">
+                                    <div className="font-semibold text-lg text-yellow-300 mb-2">
+                                        {req.title}
+                                    </div>
+                                    <div className="text-gray-300 mb-2">
+                                        {req.description}
+                                    </div>
+                                    <div className="text-gray-400 mb-2">
+                                        <strong>Deliverables:</strong> {req.deliverables.join(", ")}
+                                    </div>
+                                    <div className="text-gray-400 mb-2">
+                                        <strong>Budget:</strong> ₹{Number(req.price).toFixed(2)}
+                                    </div>
+                                </div>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
+                </>
             )}
 
             {(filter === "all" || filter === "completed") && (

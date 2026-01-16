@@ -14,6 +14,7 @@ export async function GET(
     const creator = await prisma.creatorProfile.findUnique({
       where: { username },
       select: {
+        id: true,
         collaborations: {
           include: {
             package: {
@@ -34,8 +35,16 @@ export async function GET(
       return NextResponse.json({ error: "Influencer not found" }, { status: 404 });
     }
 
+    const requests = await prisma.customPackageRequest.findMany({
+      where: { creatorId: creator.id },
+      include: {
+        brand: true,
+        creator: true,
+      },
+    });
+
     return NextResponse.json(
-      { collaborations: creator.collaborations},
+      { collaborations: creator.collaborations, requests },
       { status: 200 }
     );
   } catch (error) {

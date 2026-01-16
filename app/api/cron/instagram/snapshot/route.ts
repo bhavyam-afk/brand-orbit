@@ -18,6 +18,16 @@ export async function POST(req: Request) {
         },
     });
 
+    console.log(
+        accounts.map(a => ({
+            id: a.id,
+            platform: a.platform,
+            connected: a.connected,
+            igAccountId: a.igAccountId,
+            accessToken: !!a.accessToken,
+        }))
+    )
+
     const results = [];
 
     for (const account of accounts) {
@@ -118,6 +128,7 @@ export async function POST(req: Request) {
 
 
             results.push({ creatorId: account.creatorId, status: "success" });
+            console.log("Snapshot successful for:", results);
         } catch (err: any) {
             console.error("Snapshot failed for:", {
                 creatorId: account.creatorId,

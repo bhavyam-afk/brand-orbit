@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Deal, DealStatus } from "./types";
+import { set } from "mongoose";
 
 export function useDeals() {
     const [deals, setDeals] = useState<Deal[]>([]);
+    const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [acceptingIds, setAcceptingIds] = useState<string[]>([]);
 
@@ -19,6 +21,7 @@ export function useDeals() {
                 const res = await fetch(`/api/influencer/${username}/collaborations`, { cache: "no-store" });
                 const data = await res.json();
                 if (mounted) setDeals(Array.isArray(data?.collaborations) ? data.collaborations : []);
+                setRequests(Array.isArray(data?.requests) ? data.requests : []);
             } catch {
                 if (mounted) setDeals([]);
             } finally {
@@ -70,5 +73,5 @@ export function useDeals() {
         }
     }
 
-    return { deals, setDeals, loading, acceptDeal, acceptingIds, reloadDeals };
+    return { deals, setDeals, loading, acceptDeal, acceptingIds, reloadDeals, requests, setRequests };
 }

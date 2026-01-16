@@ -23,9 +23,9 @@ const BrandDashboard = () => {
   const [selected, setSelected] = useState("profile");
 
   return (
-    <div className="min-h-screen flex bg-[#f7f7fb]">
+    <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className="w-56 bg-white border-r shadow-lg flex flex-col py-8 px-4 gap-2">
+      <aside className="w-56 bg-amber-100 border-r shadow-lg flex flex-col py-8 px-4 gap-2">
         <div className="mb-8 text-2xl font-extrabold text-[#7b52d3] text-center tracking-wide">Brand Dashboard</div>
         {sidebarOptions.map((opt) => (
           <button

@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { Creator, DraftInfo } from "./types";
+import { Creator, CreatorPackage, DraftInfo } from "./types";
 import DraftViewerModal from "./DraftViewerModal";
 
 interface PackagesModalProps {
   creator: Creator;
   onClose: () => void;
 
-  creatorPackages: any[];
+  creatorPackages: CreatorPackage[];
   pkgsLoading: boolean;
 
   requestingPackageId: string | null;
@@ -19,7 +19,7 @@ interface PackagesModalProps {
 
   requestError: string | null;
 
-  requestPackage: (pkg: any) => void;
+  requestPackage: (pkg: CreatorPackage) => Promise<void>;
 
   selectedDraft: DraftInfo | null;
   setSelectedDraft: (d: DraftInfo | null) => void;
@@ -80,8 +80,12 @@ export default function PackagesModal({
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-                {creatorPackages.map((p: any) => {
-                  const pid = String(p.id ?? p.title);
+                {creatorPackages.map((p) => {
+                  const pid = p.id;
+
+                  const isDrafted = draftedPackageIds.includes(pid);
+                  const isActive = activePackageIds.includes(pid);
+                  const isRequested = requestedPackageIds.includes(pid);
 
                   return (
                     <div key={pid} className="bg-white/5 rounded-lg p-4">
@@ -89,9 +93,11 @@ export default function PackagesModal({
                         {p.title}
                       </div>
 
-                      <div className="text-sm text-gray-300">
-                        {p.description ?? ""}
-                      </div>
+                      {p.description && (
+                        <div className="text-sm text-gray-300">
+                          {p.description}
+                        </div>
+                      )}
 
                       <div className="mt-2 text-[#7b52d3] font-bold">
                         {p.price
@@ -105,8 +111,9 @@ export default function PackagesModal({
                       </div>
 
                       <div className="mt-3 flex items-center justify-between gap-2">
+                        {/* Status */}
                         <div className="flex items-center gap-2 text-sm">
-                          {draftedPackageIds.includes(pid) && (
+                          {isDrafted && (
                             <>
                               <span className="text-yellow-300">
                                 Draft uploaded
@@ -125,18 +132,15 @@ export default function PackagesModal({
                             </>
                           )}
 
-                          {!draftedPackageIds.includes(pid) &&
-                            activePackageIds.includes(pid) && (
-                              <span className="text-blue-400">Active ✓</span>
-                            )}
+                          {!isDrafted && isActive && (
+                            <span className="text-blue-400">Active ✓</span>
+                          )}
 
-                          {!draftedPackageIds.includes(pid) &&
-                            requestedPackageIds.includes(pid) &&
-                            !activePackageIds.includes(pid) && (
-                              <span className="text-green-400">
-                                Requested ✓
-                              </span>
-                            )}
+                          {!isDrafted && !isActive && isRequested && (
+                            <span className="text-green-400">
+                              Requested ✓
+                            </span>
+                          )}
 
                           {requestError && (
                             <span className="text-red-400">
@@ -145,23 +149,24 @@ export default function PackagesModal({
                           )}
                         </div>
 
+                        {/* Action */}
                         <button
                           onClick={() => requestPackage(p)}
                           disabled={
                             requestingPackageId === pid ||
-                            requestedPackageIds.includes(pid) ||
-                            activePackageIds.includes(pid) ||
-                            draftedPackageIds.includes(pid)
+                            isRequested ||
+                            isActive ||
+                            isDrafted
                           }
                           className="px-3 py-1 rounded bg-yellow-300 text-black text-sm disabled:opacity-60"
                         >
                           {requestingPackageId === pid
                             ? "Requesting…"
-                            : draftedPackageIds.includes(pid)
+                            : isDrafted
                             ? "Draft uploaded"
-                            : activePackageIds.includes(pid)
+                            : isActive
                             ? "Active"
-                            : requestedPackageIds.includes(pid)
+                            : isRequested
                             ? "Requested"
                             : "Request Package"}
                         </button>
